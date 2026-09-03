@@ -1,7 +1,5 @@
-// src/pages/board.tsx
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { DefectList } from '@/components/board/DefectList';
-import { Defect, FilterParams } from '@/types';
 import { useStore } from '@/store/useStore';
 import toast from 'react-hot-toast';
 
@@ -13,7 +11,8 @@ export default function BoardPage() {
     searchQuery,
     loadDefects, 
     scheduleDefect, 
-    deferDefect, 
+    deferDefect,
+    deleteDefect,
     setFilters, 
     setSearchQuery 
   } = useStore();
@@ -40,8 +39,24 @@ export default function BoardPage() {
     }
   };
 
-  const handleFilterChange = (newFilters: FilterParams) => {
+  const handleDelete = async (id: string) => {
+    if (window.confirm(`Are you sure you want to delete defect ${id}?`)) {
+      try {
+        await deleteDefect(id);
+        toast.success(`🗑️ Defect ${id} deleted`);
+      } catch (error) {
+        toast.error('❌ Failed to delete defect');
+      }
+    }
+  };
+
+  const handleFilterChange = (newFilters: any) => {
     setFilters(newFilters);
+  };
+
+  // Handle search with Enter key
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
   };
 
   return (
@@ -67,7 +82,8 @@ export default function BoardPage() {
           onFilterChange={handleFilterChange}
           onSchedule={handleSchedule}
           onDefer={handleDefer}
-          onSearch={setSearchQuery}
+          onDelete={handleDelete}
+          onSearch={handleSearch}
           searchQuery={searchQuery}
         />
       )}

@@ -1,5 +1,4 @@
-// frontend/src/components/live/BeforeAfterView.tsx
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { clsx } from 'clsx';
 import { ScheduleBlock, SolveResult } from '@/types';
 import { Button } from '@/components/ui/Button';
@@ -15,20 +14,45 @@ interface BeforeAfterViewProps {
 export function BeforeAfterView({ beforeBlocks, afterBlocks, result, onAccept, onReject }: BeforeAfterViewProps) {
   const [view, setView] = useState<'before' | 'after' | 'diff'>('after');
 
+  const diffData = useMemo(() => {
+    if (!result) return { blocksAdded: [], blocksRemoved: [], blocksUnchanged: [] };
+    
+    const beforeIds = new Set(beforeBlocks.map(b => b.id));
+    const afterIds = new Set(afterBlocks.map(b => b.id));
+    
+    const blocksAdded = afterBlocks.filter(b => !beforeIds.has(b.id)).map(b => b.id);
+    const blocksRemoved = beforeBlocks.filter(b => !afterIds.has(b.id)).map(b => b.id);
+    const blocksUnchanged = beforeBlocks.filter(b => afterIds.has(b.id)).map(b => b.id);
+    
+    return { blocksAdded, blocksRemoved, blocksUnchanged };
+  }, [beforeBlocks, afterBlocks, result]);
+
   const getBlockStyle = (block: ScheduleBlock, isAfter: boolean) => {
-    if (view === 'diff' && result) {
-      if (result.blocksAdded.includes(block.id) && isAfter) {
-        return 'bg-red-100 border-red-500 animate-pulse-glow';
+    if (view === 'diff') {
+      if (diffData.blocksAdded.includes(block.id) && isAfter) {
+        return 'bg-green-100 border-green-500 ring-2 ring-green-300';
       }
-      if (result.blocksMoved.includes(block.id) && isAfter) {
-        return 'bg-yellow-100 border-yellow-500';
+      if (diffData.blocksRemoved.includes(block.id) && !isAfter) {
+        return 'bg-red-100 border-red-500 opacity-50 line-through';
       }
-      if (result.blocksUnchanged.includes(block.id)) {
-        return 'bg-green-50 border-green-300';
+      if (diffData.blocksUnchanged.includes(block.id)) {
+        return 'bg-blue-50 border-blue-300';
       }
     }
     return 'bg-white border-gray-200';
   };
+
+  const getDisplayBlocks = (corridor: string) => {
+    if (view === 'before') {
+      return beforeBlocks.filter(b => b.corridor === corridor);
+    } else if (view === 'after') {
+      return afterBlocks.filter(b => b.corridor === corridor);
+    } else {
+      return afterBlocks.filter(b => b.corridor === corridor);
+    }
+  };
+
+  const corridors = ['A', 'B', 'C', 'D', 'E'];
 
   return (
     <div>
@@ -63,6 +87,25 @@ export function BeforeAfterView({ beforeBlocks, afterBlocks, result, onAccept, o
         )}
       </div>
 
+      {view === 'diff' && result && (
+        <div className="mb-3 text-sm">
+          <div className="flex items-center gap-4 text-xs">
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 bg-green-500 rounded" />
+              Added: {diffData.blocksAdded.length}
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 bg-red-500 rounded" />
+              Removed: {diffData.blocksRemoved.length}
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 bg-blue-500 rounded" />
+              Unchanged: {diffData.blocksUnchanged.length}
+            </span>
+          </div>
+        </div>
+      )}
+
       <div className="border rounded-lg overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
@@ -72,9 +115,8 @@ export function BeforeAfterView({ beforeBlocks, afterBlocks, result, onAccept, o
             </tr>
           </thead>
           <tbody>
-            {['A', 'B', 'C', 'D', 'E'].map(corridor => {
-              const blocks = view === 'before' ? beforeBlocks : afterBlocks;
-              const filtered = blocks.filter(b => b.corridor === corridor);
+            {corridors.map(corridor => {
+              const blocks = getDisplayBlocks(corridor);
               const isAfter = view === 'after' || view === 'diff';
               
               return (
@@ -82,13 +124,14 @@ export function BeforeAfterView({ beforeBlocks, afterBlocks, result, onAccept, o
                   <td className="px-3 py-2 font-medium text-gray-700">{corridor}</td>
                   <td className="px-3 py-2">
                     <div className="flex flex-wrap gap-1.5">
-                      {filtered.length > 0 ? filtered.map(block => (
+                      {blocks.length > 0 ? blocks.map(block => (
                         <div
                           key={block.id}
                           className={clsx(
                             'px-2 py-0.5 rounded text-xs border transition-all',
                             getBlockStyle(block, isAfter)
                           )}
+                          title={block.id}
                         >
                           {block.id}
                           <span className="ml-1 text-gray-400">{block.defects.length}</span>
@@ -108,9 +151,9 @@ export function BeforeAfterView({ beforeBlocks, afterBlocks, result, onAccept, o
       {result && view !== 'before' && (
         <div className="mt-3 flex items-center justify-between">
           <div className="text-sm text-gray-600">
-            <span className="font-medium">{result.blocksUnchanged.length}</span> blocks unchanged,
-            <span className="font-medium text-yellow-600"> {result.blocksMoved.length}</span> moved,
-            <span className="font-medium text-red-600"> {result.blocksAdded.length}</span> added
+            <span className="font-medium">{diffData.blocksUnchanged.length}</span> blocks unchanged,
+            <span className="font-medium text-red-600"> {diffData.blocksRemoved.length}</span> removed,
+            <span className="font-medium text-green-600"> {diffData.blocksAdded.length}</span> added
           </div>
           <div className="flex gap-2">
             <Button onClick={onAccept} variant="success" size="sm">Accept</Button>

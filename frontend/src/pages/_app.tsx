@@ -11,15 +11,13 @@ export default function App({ Component, pageProps }: AppProps) {
   const loadStatus = useStore(state => state.loadStatus);
 
   useEffect(() => {
-    // Load system status on app start
     loadStatus();
-    // Refresh status every 10 seconds
     const interval = setInterval(loadStatus, 10000);
     return () => clearInterval(interval);
   }, [loadStatus]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       <Toaster
         position="top-right"
         toastOptions={{
@@ -43,7 +41,7 @@ export default function App({ Component, pageProps }: AppProps) {
         }}
       />
       <TopNav />
-      <main className="pb-12">
+      <main className="flex-1 pb-14">
         <Component {...pageProps} />
       </main>
       <StatusBar />

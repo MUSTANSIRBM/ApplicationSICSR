@@ -132,3 +132,68 @@
 .border-safety-critical {
   border-color: #EF4444;
 }
+/* Status bar improvements */
+.fixed.bottom-0 {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Ensure content doesn't hide behind status bar */
+main.pb-14 {
+  padding-bottom: 3.5rem; /* 14 * 0.25rem = 3.5rem */
+}
+
+/* Mobile responsiveness for status bar */
+@media (max-width: 640px) {
+  .fixed.bottom-0 .flex.items-center {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  
+  .fixed.bottom-0 .flex.items-center.gap-4 {
+    gap: 0.5rem;
+  }
+  
+  .fixed.bottom-0 .flex.items-center.gap-3 {
+    gap: 0.5rem;
+  }
+}
+
+/* Search input enhancements */
+input[type="text"]::placeholder {
+  color: #9CA3AF;
+  font-weight: 400;
+}
+
+input[type="text"]:focus::placeholder {
+  color: #D1D5DB;
+}
+
+/* Custom scrollbar for search results */
+.search-results::-webkit-scrollbar {
+  width: 4px;
+}
+
+.search-results::-webkit-scrollbar-track {
+  background: #F3F4F6;
+}
+
+.search-results::-webkit-scrollbar-thumb {
+  background: #D1D5DB;
+  border-radius: 9999px;
+}
+
+.search-results::-webkit-scrollbar-thumb:hover {
+  background: #9CA3AF;
+}
+
+/* KBD styling */
+kbd {
+  font-family: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+  font-size: 10px;
+  background: #F3F4F6;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #E5E7EB;
+  box-shadow: 0 1px 0 #D1D5DB;
+}

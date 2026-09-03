@@ -1,12 +1,10 @@
-// frontend/src/api/mockData.ts
-import { Defect, TimelineData, ImpactData, SystemStatus, InjectionDefect, SolveResult } from '@/types';
+import { Defect, TimelineData, ImpactData, SystemStatus, InjectionDefect, SolveResult, ScheduleBlock, TrainSlot } from '@/types';
 
 const today = new Date();
 const weekStart = new Date(today);
 weekStart.setDate(today.getDate() - today.getDay());
 
 const corridors = ['A', 'B', 'C', 'D', 'E'];
-
 const departments: ('track' | 'power' | 'signals')[] = ['track', 'power', 'signals'];
 
 const defectDescriptions: Record<string, string[]> = {
@@ -76,7 +74,6 @@ function generateDefects(count: number): Defect[] {
 
 function generateBlocks(defects: Defect[]): ScheduleBlock[] {
   const blocks: ScheduleBlock[] = [];
-  const usedCorridors: Record<string, number> = {};
   
   const shuffled = [...defects].sort(() => Math.random() - 0.5);
   const chunked = [];
@@ -139,13 +136,17 @@ function generateTrainSlots(): TrainSlot[] {
   return slots;
 }
 
-export const mockDefects = generateDefects(30);
-export const mockBlocks = generateBlocks(mockDefects);
+// Initial data
+let currentDefects = generateDefects(30);
+let currentBlocks = generateBlocks(currentDefects);
+
+export const mockDefects = currentDefects;
+export const mockBlocks = currentBlocks;
 export const mockTrainSlots = generateTrainSlots();
 
 export const mockTimelineData: TimelineData = {
   corridors,
-  blocks: mockBlocks,
+  blocks: currentBlocks,
   trainSlots: mockTrainSlots,
   weekStart: weekStart.toISOString(),
   weekEnd: new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
@@ -193,25 +194,48 @@ export const mockSolveResult = (defect: InjectionDefect): SolveResult => ({
   status: 'solved-moved',
   timeMs: 856,
   blocksMoved: ['B-012', 'B-045', 'B-078'],
-  blocksAdded: [`B-${String(mockBlocks.length + 1).padStart(3, '0')}`],
+  blocksAdded: [`B-${String(currentBlocks.length + 1).padStart(3, '0')}`],
   blocksUnchanged: ['B-001', 'B-003', 'B-005', 'B-007', 'B-009', 'B-011', 'B-013', 'B-015'],
   explanation: `Emergency ${defect.department} defect injected. Re-solved with 2 blocks moved to accommodate the new priority task.`,
   confidence: 94,
 });
 
-// src/api/mockData.ts - Add this function at the end
-// Add a function to update mock data dynamically
-
-let currentDefects = generateDefects(30);
-let currentBlocks = generateBlocks(currentDefects);
+// Mutation functions
+export const getCurrentDefects = () => currentDefects;
+export const getCurrentBlocks = () => currentBlocks;
 
 export const updateMockDefects = (newDefects: Defect[]) => {
   currentDefects = newDefects;
+  currentBlocks = generateBlocks(currentDefects);
 };
 
-export const updateMockBlocks = (newBlocks: ScheduleBlock[]) => {
-  currentBlocks = newBlocks;
+export const deleteMockDefect = (id: string): boolean => {
+  const index = currentDefects.findIndex(d => d.id === id);
+  if (index !== -1) {
+    currentDefects.splice(index, 1);
+    currentBlocks = generateBlocks(currentDefects);
+    return true;
+  }
+  return false;
 };
 
-export const getCurrentDefects = () => currentDefects;
-export const getCurrentBlocks = () => currentBlocks;
+export const scheduleMockDefect = (id: string): Defect | null => {
+  const defect = currentDefects.find(d => d.id === id);
+  if (defect && defect.status !== 'scheduled') {
+    defect.status = 'scheduled';
+    currentBlocks = generateBlocks(currentDefects);
+    return defect;
+  }
+  return null;
+};
+
+export const deferMockDefect = (id: string): Defect | null => {
+  const defect = currentDefects.find(d => d.id === id);
+  if (defect && defect.status !== 'deferred') {
+    defect.status = 'deferred';
+    defect.tier = 'deferred';
+    currentBlocks = generateBlocks(currentDefects);
+    return defect;
+  }
+  return null;
+};

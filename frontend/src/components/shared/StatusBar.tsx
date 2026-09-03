@@ -13,14 +13,14 @@ export function StatusBar() {
 
   if (!systemStatus) {
     return (
-      <div className="bg-gray-50 border-t border-gray-200 px-4 py-1.5 text-xs text-gray-400">
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-gray-50 border-t border-gray-200 px-4 py-1.5 text-xs text-gray-400">
         Loading status...
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-50 border-t border-gray-200 px-4 py-1.5 text-xs text-gray-600 flex items-center justify-between">
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-gray-50 border-t border-gray-200 px-4 py-1.5 text-xs text-gray-600 flex items-center justify-between shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
       <div className="flex items-center gap-4">
         <span className="flex items-center gap-1">
           <span className="font-medium">Tasks:</span>
@@ -48,4 +48,4 @@ export function StatusBar() {
       </div>
     </div>
   );
-} 
+}

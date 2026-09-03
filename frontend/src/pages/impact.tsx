@@ -1,4 +1,3 @@
-// src/pages/impact.tsx
 import { useEffect } from 'react';
 import { MetricCard } from '@/components/impact/MetricCard';
 import { SavingsChart } from '@/components/impact/SavingsChart';
@@ -56,6 +55,7 @@ export default function ImpactPage() {
           title="Total Savings"
           value={`${data.hoursSaved}h`}
           subtitle={`${data.savingsPercentage}% reduction`}
+          description="Total hours saved through optimized scheduling"
           icon="💰"
           color="green"
           animate
@@ -63,7 +63,8 @@ export default function ImpactPage() {
         <MetricCard
           title="Cost Savings"
           value={`₹${(data.costSavings / 100000).toFixed(1)}L`}
-          subtitle="Estimated"
+          subtitle="Estimated annual savings"
+          description="Based on average operational costs"
           icon="📊"
           color="blue"
           animate
@@ -72,6 +73,7 @@ export default function ImpactPage() {
           title="Corridor Utilization"
           value={`${data.corridorUtilizationAfter}%`}
           subtitle={`${data.corridorUtilizationAfter - data.corridorUtilizationBefore}% improvement`}
+          description="Percentage of available corridor time used"
           icon="📈"
           color="yellow"
           change={Math.round((data.corridorUtilizationAfter - data.corridorUtilizationBefore) / data.corridorUtilizationBefore * 100)}
@@ -79,9 +81,10 @@ export default function ImpactPage() {
           animate
         />
         <MetricCard
-          title="Savings Breakdown"
+          title="Bundling Savings"
           value={`${data.breakdown.bundling}h`}
           subtitle={`${data.breakdown.betterTiming}h from better timing`}
+          description="Hours saved by grouping related tasks"
           icon="🔗"
           color="blue"
         />

@@ -1,5 +1,4 @@
-// frontend/src/components/board/DefectCard.tsx
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { clsx } from 'clsx';
 import { Defect } from '@/types';
 import { Badge } from '@/components/ui/Badge';
@@ -9,6 +8,7 @@ interface DefectCardProps {
   defect: Defect;
   onSchedule?: (id: string) => void;
   onDefer?: (id: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 const tierColors = {
@@ -18,8 +18,25 @@ const tierColors = {
   deferred: 'border-gray-400/30 bg-gray-50',
 };
 
-export function DefectCard({ defect, onSchedule, onDefer }: DefectCardProps) {
+export function DefectCard({ defect, onSchedule, onDefer, onDelete }: DefectCardProps) {
   const [expanded, setExpanded] = useState(false);
+
+  const calculatedScore = useMemo(() => {
+    const MAX_SEVERITY = 100;
+    const MAX_OVERDUE_DAYS = 30;
+    const MAX_TRAFFIC_IMPACT = 100;
+    const severityWeight = 0.5;
+    const overdueWeight = 0.3;
+    const trafficWeight = 0.2;
+
+    const severityContrib = (defect.severity / MAX_SEVERITY) * severityWeight * 100;
+    const overdueContrib = (Math.min(defect.overdueDays, MAX_OVERDUE_DAYS) / MAX_OVERDUE_DAYS) * overdueWeight * 100;
+    const trafficContrib = (defect.trafficImpact / MAX_TRAFFIC_IMPACT) * trafficWeight * 100;
+    
+    return severityContrib + overdueContrib + trafficContrib;
+  }, [defect]);
+
+  const displayScore = defect.score || calculatedScore;
 
   return (
     <div className={clsx(
@@ -40,7 +57,7 @@ export function DefectCard({ defect, onSchedule, onDefer }: DefectCardProps) {
             <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
               <span>Corridor {defect.corridor}</span>
               <span>•</span>
-              <span>Score: <span className="font-semibold text-gray-700">{defect.score.toFixed(1)}</span></span>
+              <span>Score: <span className="font-semibold text-gray-700">{displayScore.toFixed(1)}/100</span></span>
               <span>•</span>
               <span>Overdue: {defect.overdueDays}d</span>
             </div>
@@ -58,17 +75,34 @@ export function DefectCard({ defect, onSchedule, onDefer }: DefectCardProps) {
           
           <div className="flex items-center gap-2">
             <button
-              onClick={() => onSchedule?.(defect.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSchedule?.(defect.id);
+              }}
               className="px-3 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
               Schedule Now
             </button>
             <button
-              onClick={() => onDefer?.(defect.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDefer?.(defect.id);
+              }}
               className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
             >
               Defer
             </button>
+            {onDelete && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete?.(defect.id);
+                }}
+                className="px-3 py-1 text-xs bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors ml-auto"
+              >
+                Delete
+              </button>
+            )}
           </div>
         </div>
       )}

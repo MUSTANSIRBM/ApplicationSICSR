@@ -1,4 +1,3 @@
-// frontend/src/components/impact/MetricCard.tsx
 import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 
@@ -6,6 +5,7 @@ interface MetricCardProps {
   title: string;
   value: string | number;
   subtitle?: string;
+  description?: string;
   change?: number;
   icon?: string;
   trend?: 'up' | 'down' | 'neutral';
@@ -17,6 +17,7 @@ export function MetricCard({
   title, 
   value, 
   subtitle, 
+  description,
   change, 
   icon, 
   trend, 
@@ -64,7 +65,7 @@ export function MetricCard({
   return (
     <div className={clsx('card border', colors[color])}>
       <div className="flex items-start justify-between">
-        <div>
+        <div className="flex-1">
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{title}</p>
           <p className="text-2xl font-bold text-gray-900 mt-1">
             {typeof finalValue === 'number' && !Number.isInteger(finalValue) 
@@ -72,6 +73,7 @@ export function MetricCard({
               : finalValue}
           </p>
           {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
+          {description && <p className="text-xs text-gray-400 mt-1">{description}</p>}
         </div>
         {icon && <span className="text-2xl">{icon}</span>}
       </div>
