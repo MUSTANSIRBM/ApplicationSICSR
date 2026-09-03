@@ -1,7 +1,7 @@
 # app/data/crud.py
-from sqlmodel import Session, select, and_, or_
+from sqlmodel import Session, select, and_
 from typing import List, Optional
-from datetime import datetime, date
+from datetime import datetime
 from uuid import UUID
 from app.data.database import (
     DefectDB, CorridorDB, TimetableSlotDB,
@@ -133,11 +133,42 @@ class CRUD:
 
     # Helper conversion functions
     def _defect_from_db(self, db_defect: DefectDB) -> Defect:
+        # Handle department - convert string to Enum
+        department_value = db_defect.department
+        if isinstance(department_value, str):
+            try:
+                department_enum = Department(department_value)
+            except ValueError:
+                # If the string doesn't match, try to find by value
+                for dept in Department:
+                    if dept.value == department_value:
+                        department_enum = dept
+                        break
+                else:
+                    department_enum = Department.TRACK  # Default
+        else:
+            department_enum = department_value
+
+        # Handle status - convert string to Enum
+        status_value = db_defect.status
+        if isinstance(status_value, str):
+            try:
+                status_enum = DefectStatus(status_value)
+            except ValueError:
+                for stat in DefectStatus:
+                    if stat.value == status_value:
+                        status_enum = stat
+                        break
+                else:
+                    status_enum = DefectStatus.NEW
+        else:
+            status_enum = status_value
+
         return Defect(
             id=db_defect.id,
             defect_id=db_defect.defect_id,
             description=db_defect.description,
-            department=Department(db_defect.department),
+            department=department_enum,
             severity=db_defect.severity,
             overdue_days=db_defect.overdue_days,
             traffic_impact=db_defect.traffic_impact,
@@ -145,7 +176,7 @@ class CRUD:
             corridor_id=db_defect.corridor_id,
             system_source=db_defect.system_source,
             created_at=db_defect.created_at,
-            status=DefectStatus(db_defect.status),
+            status=status_enum,
             score=db_defect.score
         )
 
@@ -160,16 +191,59 @@ class CRUD:
         )
 
     def _block_from_db(self, db_block: BlockDB) -> Block:
+        # Handle department - convert string to Enum
+        dept_value = db_block.department
+        if dept_value and isinstance(dept_value, str):
+            try:
+                dept_enum = Department(dept_value)
+            except ValueError:
+                for dept in Department:
+                    if dept.value == dept_value:
+                        dept_enum = dept
+                        break
+                else:
+                    dept_enum = None
+        else:
+            dept_enum = dept_value if dept_value else None
+
+        # Handle status - convert string to Enum
+        status_value = db_block.status
+        if isinstance(status_value, str):
+            try:
+                status_enum = BlockStatus(status_value)
+            except ValueError:
+                for stat in BlockStatus:
+                    if stat.value == status_value:
+                        status_enum = stat
+                        break
+                else:
+                    status_enum = BlockStatus.PROPOSED
+        else:
+            status_enum = status_value
+
+        # Handle combined departments
+        combined_depts = []
+        if db_block.combined_departments:
+            for d in db_block.combined_departments.split(","):
+                if d:
+                    try:
+                        combined_depts.append(Department(d))
+                    except ValueError:
+                        for dept in Department:
+                            if dept.value == d:
+                                combined_depts.append(dept)
+                                break
+
         return Block(
             id=db_block.id,
             corridor_id=db_block.corridor_id,
             start_time=db_block.start_time,
             end_time=db_block.end_time,
-            department=Department(db_block.department) if db_block.department else None,
+            department=dept_enum,
             defect_ids=[UUID(d) for d in db_block.defect_ids.split(",") if d],
             is_combined=db_block.is_combined,
-            combined_departments=[Department(d) for d in db_block.combined_departments.split(",") if d],
-            status=BlockStatus(db_block.status),
+            combined_departments=combined_depts,
+            status=status_enum,
             locked_at=db_block.locked_at,
             executed_at=db_block.executed_at
         )

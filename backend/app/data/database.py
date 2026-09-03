@@ -1,9 +1,9 @@
+# app/data/database.py
 from sqlmodel import SQLModel, Field, create_engine, Session, select
-from typing import Optional
-from datetime import datetime, date
+from typing import Optional, Generator
+from datetime import datetime
 from uuid import UUID, uuid4
 import os
-from contextlib import contextmanager
 
 # Database setup
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./app.db")
@@ -25,11 +25,11 @@ class DefectDB(SQLModel, table=True):
     system_source: str
     created_at: datetime = Field(default_factory=datetime.now)
     status: str = "NEW"
-    score: Optional[float] = None
-    scheduled_time: Optional[datetime] = None
-    scheduled_end: Optional[datetime] = None
-    block_id: Optional[UUID] = None
-    deferral_reason: Optional[str] = None
+    score: float = None
+    scheduled_time: datetime = None
+    scheduled_end: datetime = None
+    block_id: UUID = None
+    deferral_reason: str = None
 
 
 class CorridorDB(SQLModel, table=True):
@@ -78,15 +78,20 @@ class BlockDB(SQLModel, table=True):
     is_combined: bool = False
     combined_departments: str  # Comma-separated department names
     status: str = "PROPOSED"
-    locked_at: Optional[datetime] = None
-    executed_at: Optional[datetime] = None
+    locked_at: datetime = None
+    executed_at: datetime = None
 
 
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
 
 
-@contextmanager
-def get_session():
+def get_session() -> Session:
+    """Get a database session."""
+    return Session(engine)
+
+
+def get_db() -> Generator[Session, None, None]:
+    """Get a database session as a context manager."""
     with Session(engine) as session:
         yield session

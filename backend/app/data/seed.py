@@ -1,7 +1,6 @@
 # app/data/seed.py
 import random
-from datetime import datetime, timedelta, date
-from uuid import uuid4
+from datetime import datetime, timedelta
 from faker import Faker
 import numpy as np
 from app.data.database import get_session, create_db_and_tables
@@ -24,7 +23,8 @@ class DataSeeder:
         """Seed the entire database with synthetic data."""
         create_db_and_tables()
 
-        with get_session() as session:
+        session = get_session()
+        try:
             crud = CRUD(session)
 
             # Check if data already exists
@@ -38,20 +38,14 @@ class DataSeeder:
             for corridor in corridors:
                 crud.create_corridor(corridor)
 
-            # Create timetable slots
-            timetable = self._create_timetable_slots(corridors)
-            # TODO: Add timetable slots to DB when CRUD methods are added
-
-            # Create goods forecast
-            goods = self._create_goods_forecast(corridors)
-            # TODO: Add goods forecast to DB when CRUD methods are added
-
             # Create defects
             defects = self._create_defects(corridors)
             for defect in defects:
                 crud.create_defect(defect)
 
             print(f"✅ Seeded database with {len(corridors)} corridors, {len(defects)} defects")
+        finally:
+            session.close()
 
     def _create_corridors(self) -> list:
         """Create 5 sample corridors."""
@@ -77,49 +71,6 @@ class DataSeeder:
             corridors.append(corridor)
 
         return corridors
-
-    def _create_timetable_slots(self, corridors: list) -> list:
-        """Create timetable slots for each corridor."""
-        slots = []
-        base_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-
-        for corridor in corridors[:3]:  # Only first 3 have trains
-            for day in range(7):
-                for hour in [6, 8, 10, 12, 14, 16, 18, 20]:
-                    slot_time = base_date + timedelta(days=day, hours=hour)
-                    slot = TimetableSlot(
-                        corridor_id=corridor.corridor_id,
-                        train_id=f"TRAIN-{random.randint(100, 999)}",
-                        start_time=slot_time,
-                        end_time=slot_time + timedelta(hours=2),
-                        is_goods=False,
-                        priority=1
-                    )
-                    slots.append(slot)
-
-        return slots
-
-    def _create_goods_forecast(self, corridors: list) -> list:
-        """Create goods train forecasts."""
-        forecasts = []
-        base_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-
-        for corridor in corridors:
-            for day in range(7):
-                # Add 1-2 goods trains per day
-                for _ in range(random.randint(1, 2)):
-                    hour = random.randint(1, 23)
-                    forecast_time = base_date + timedelta(days=day, hours=hour)
-                    forecast = GoodsForecast(
-                        corridor_id=corridor.corridor_id,
-                        train_id=f"GOODS-{random.randint(100, 999)}",
-                        start_time=forecast_time,
-                        end_time=forecast_time + timedelta(hours=4),
-                        forecast_type=random.choice(["scheduled", "estimated"])
-                    )
-                    forecasts.append(forecast)
-
-        return forecasts
 
     def _create_defects(self, corridors: list) -> list:
         """Create realistic defect records."""
