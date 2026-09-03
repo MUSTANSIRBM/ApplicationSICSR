@@ -6,12 +6,12 @@ from pathlib import Path
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, f1_score
+from sklearn.preprocessing import LabelEncoder
 from xgboost import XGBClassifier
 import warnings
 
 warnings.filterwarnings('ignore')
 
-# Paths
 DATA_PATH = Path(__file__).parent / "training_data.csv"
 MODEL_PATH = Path(__file__).parent / "decision_model.joblib"
 SEED = 42
@@ -21,7 +21,7 @@ def load_data():
     """Load and prepare training data."""
     df = pd.read_csv(DATA_PATH)
 
-    # Separate features and labels
+    # IMPORTANT: REMOVED 'create_repair_defect' and 'corridor' to prevent label leakage
     feature_columns = [
         'train_speed_kmh',
         'distance_to_obstacle_km',
@@ -36,18 +36,23 @@ def load_data():
         'axle_balance',
         'ahead_section_status',
         'known_train_schedule',
-        'distance_from_station_km',
-        'create_repair_defect',
-        'corridor'
+        'distance_from_station_km'
     ]
 
     X = df[feature_columns].copy()
     y = df['action'].copy()
 
-    # Encode categorical features
     X = encode_features(X)
 
-    return X, y
+    # Encode labels to integers for XGBoost
+    label_encoder = LabelEncoder()
+    y_encoded = label_encoder.fit_transform(y)
+
+    # Store label mapping for later use
+    label_mapping = dict(zip(label_encoder.classes_, label_encoder.transform(label_encoder.classes_)))
+    print(f"📋 Label mapping: {label_mapping}")
+
+    return X, y_encoded, label_encoder
 
 
 def encode_features(X):
@@ -56,10 +61,21 @@ def encode_features(X):
     env_mapping = {"clear": 0, "rain": 1, "heavy_rain": 2, "fog": 3, "snow": 4, "flood": 5}
     X['environmental_condition'] = X['environmental_condition'].map(env_mapping)
 
-    # obstruction_type
+    # obstruction_type - expanded to 13 types mapped 0-12
     obs_mapping = {
-        "landslide_debris": 0, "boulder": 1, "track_buckling": 2,
-        "fallen_tree": 3, "stranded_vehicle": 4, "water_logging": 5, "cattle_crossing": 6
+        "landslide_debris": 0,
+        "boulder": 1,
+        "track_buckling": 2,
+        "fallen_tree": 3,
+        "stranded_vehicle": 4,
+        "water_logging": 5,
+        "cattle_crossing": 6,
+        "broken_rail": 7,
+        "signal_cable_theft": 8,
+        "sensor_miscount": 9,
+        "environmental_false_positive": 10,
+        "unknown_obstruction": 11,
+        "equipment_failure_ahead": 12
     }
     X['obstruction_type'] = X['obstruction_type'].map(obs_mapping)
 
@@ -70,25 +86,18 @@ def encode_features(X):
     # ahead_section_status
     X['ahead_section_status'] = X['ahead_section_status'].map({"CLEAR": 0, "OCCUPIED": 1})
 
-    # corridor (hash-based encoding)
-    corridors = ['DEL-AGRA', 'MUM-PUNE', 'KOL-HOW', 'CHN-BGLR', 'HYB-SEC']
-    corridor_mapping = {c: i for i, c in enumerate(corridors)}
-    X['corridor'] = X['corridor'].map(corridor_mapping)
-
     # Boolean columns
     X['weather_alert'] = X['weather_alert'].astype(int)
     X['alternative_route_available'] = X['alternative_route_available'].astype(int)
     X['known_train_schedule'] = X['known_train_schedule'].astype(int)
-    X['create_repair_defect'] = X['create_repair_defect'].astype(int)
 
     return X
 
 
-def train_models(X_train, X_test, y_train, y_test):
+def train_models(X_train, X_test, y_train, y_test, label_encoder):
     """Train RandomForest and XGBoost, compare performance."""
     results = {}
 
-    # 1. RandomForest
     print("🌲 Training RandomForest...")
     rf = RandomForestClassifier(
         n_estimators=100,
@@ -106,7 +115,6 @@ def train_models(X_train, X_test, y_train, y_test):
     }
     print(f"   ✅ RandomForest F1 (macro): {rf_f1:.4f}")
 
-    # 2. XGBoost
     print("🚀 Training XGBoost...")
     xgb = XGBClassifier(
         n_estimators=100,
@@ -126,7 +134,6 @@ def train_models(X_train, X_test, y_train, y_test):
     }
     print(f"   ✅ XGBoost F1 (macro): {xgb_f1:.4f}")
 
-    # Determine winner
     if rf_f1 >= xgb_f1:
         winner = 'RandomForest'
     else:
@@ -143,34 +150,39 @@ def main():
     print("🧠 ML Sensor Decision Model Training")
     print("=" * 60)
 
-    # 1. Load data
     print("\n📂 Loading training data...")
-    X, y = load_data()
+    X, y, label_encoder = load_data()
     print(f"   Data shape: {X.shape}")
-    print(f"   Classes: {y.unique().tolist()}")
-    print(f"   Class distribution:\n{y.value_counts()}")
+    print(f"   Classes (encoded): {sorted(set(y))}")
+    print(f"   Class distribution:\n{pd.Series(y).value_counts().sort_index()}")
 
-    # 2. Train/test split
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=SEED, stratify=y
     )
     print(f"\n📊 Train size: {len(X_train)}, Test size: {len(X_test)}")
 
-    # 3. Train models
-    results, winner = train_models(X_train, X_test, y_train, y_test)
+    results, winner = train_models(X_train, X_test, y_train, y_test, label_encoder)
 
-    # 4. Save winner model
     print(f"\n💾 Saving winning model to {MODEL_PATH}...")
     MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
-    joblib.dump(results[winner]['model'], MODEL_PATH)
+
+    # Save both the model and the label encoder
+    joblib.dump({
+        'model': results[winner]['model'],
+        'label_encoder': label_encoder,
+        'feature_names': X.columns.tolist()
+    }, MODEL_PATH)
     print("✅ Model saved!")
 
-    # 5. Print full evaluation
+    # Decode predictions for report
+    y_test_decoded = label_encoder.inverse_transform(y_test)
+    pred_decoded = label_encoder.inverse_transform(results[winner]['predictions'])
+
     print("\n📋 Classification Report (Winner):")
     print(classification_report(
-        y_test,
-        results[winner]['predictions'],
-        target_names=["proceed_with_caution", "reduce_speed", "reroute", "emergency_stop"]
+        y_test_decoded,
+        pred_decoded,
+        target_names=label_encoder.classes_
     ))
 
     print(f"\n✅ Training complete! Model saved to: {MODEL_PATH}")

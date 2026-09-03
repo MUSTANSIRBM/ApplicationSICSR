@@ -13,14 +13,14 @@ from app.core.incident_models import (
 
 logger = logging.getLogger(__name__)
 
-# Weather friction multipliers
+# Updated weather friction multipliers
 WEATHER_FRICTION = {
     "clear": 1.0,
     "rain": 1.3,
-    "heavy_rain": 1.8,
-    "fog": 1.5,
-    "snow": 2.0,
-    "flood": 2.2,
+    "heavy_rain": 1.6,
+    "fog": 1.2,
+    "snow": 1.9,
+    "flood": 1.7,
 }
 
 # Model path
@@ -38,8 +38,14 @@ class DecisionEngine:
         """Load the ML model if available, otherwise fallback gracefully."""
         try:
             if MODEL_PATH.exists():
-                self.model = joblib.load(MODEL_PATH)
-                logger.info(f"✅ ML model loaded from {MODEL_PATH}")
+                loaded = joblib.load(MODEL_PATH)
+                # Handle both old and new model formats
+                if isinstance(loaded, dict) and 'model' in loaded:
+                    self.model = loaded
+                    logger.info(f"✅ ML model (with label encoder) loaded from {MODEL_PATH}")
+                else:
+                    self.model = loaded
+                    logger.info(f"✅ ML model loaded from {MODEL_PATH}")
             else:
                 logger.warning(f"⚠️ ML model not found at {MODEL_PATH}. Using rule-based fallback only.")
                 self.model = None
@@ -49,15 +55,13 @@ class DecisionEngine:
 
     def _calculate_physics(self, request: IncidentRequest) -> Physics:
         """Calculate physics metrics based on speed, distance, and weather."""
-        # Get friction multiplier for weather
+        # Updated friction multiplier
         friction = WEATHER_FRICTION.get(request.environmental_condition, 1.0)
 
-        # Calculate base braking distance
-        # distance = (speed^2) / (250 * friction)
-        braking_distance = (request.train_speed_kmh ** 2) / (250 * friction)
+        # Updated braking distance formula: ((speed / 100) ** 2) * 2.0 * friction
+        braking_distance = ((request.train_speed_kmh / 100) ** 2) * 2.0 * friction
 
         # Effective distance = obstacle distance - (latency impact)
-        # Latency impact = (latency_ms / 1000) * (speed_kmh / 3.6)
         latency_impact = (request.communication_latency_ms / 1000) * (request.train_speed_kmh / 3.6)
         effective_distance = max(0, request.distance_to_obstacle_km - latency_impact)
 
@@ -78,8 +82,8 @@ class DecisionEngine:
 
     def _hard_rule_decision(self, request: IncidentRequest, physics: Physics) -> Tuple[Decision, bool]:
         """Apply hard safety rules. Returns (Decision, was_applied)."""
-        # Rule 1: High severity + cannot stop + no alternative → emergency_stop
-        if (request.severity_score >= 8 and
+        # Updated Rule 1: severity >= 9 (not 8)
+        if (request.severity_score >= 9 and
                 not physics.safe_stopping_possible and
                 not request.alternative_route_available):
             return Decision(
@@ -87,7 +91,7 @@ class DecisionEngine:
                 confidence=1.0,
                 source="hard_rule",
                 reasons=[
-                    f"Severity score {request.severity_score} >= 8",
+                    f"Severity score {request.severity_score} >= 9",
                     "Safe stopping not possible",
                     "No alternative route available"
                 ]
@@ -120,8 +124,11 @@ class DecisionEngine:
         return None, False
 
     def _extract_features(self, request: IncidentRequest) -> np.ndarray:
-        """Extract ONLY the 16 raw input features for ML inference."""
-        # Order must match training data columns
+        """
+        Extract ONLY the 14 raw sensor features for ML inference.
+        IMPORTANT: REMOVED create_repair_defect and corridor to prevent label leakage.
+        """
+        # Order must match training data columns (14 features, NOT 16)
         features = [
             request.train_speed_kmh,
             request.distance_to_obstacle_km,
@@ -137,8 +144,8 @@ class DecisionEngine:
             1.0 if request.ahead_section_status == "OCCUPIED" else 0.0,
             1.0 if request.known_train_schedule else 0.0,
             request.distance_from_station_km,
-            1.0 if request.create_repair_defect else 0.0,
-            self._encode_corridor(request.corridor)
+            # REMOVED: create_repair_defect (control flag)
+            # REMOVED: corridor (control flag)
         ]
         return np.array(features).reshape(1, -1)
 
@@ -155,7 +162,7 @@ class DecisionEngine:
         return mapping.get(value, 0.0)
 
     def _encode_obstruction(self, value: str) -> float:
-        """Encode obstruction type as float."""
+        """Encode obstruction type as float with all 13 types."""
         mapping = {
             "landslide_debris": 0.0,
             "boulder": 1.0,
@@ -163,7 +170,13 @@ class DecisionEngine:
             "fallen_tree": 3.0,
             "stranded_vehicle": 4.0,
             "water_logging": 5.0,
-            "cattle_crossing": 6.0
+            "cattle_crossing": 6.0,
+            "broken_rail": 7.0,
+            "signal_cable_theft": 8.0,
+            "sensor_miscount": 9.0,
+            "environmental_false_positive": 10.0,
+            "unknown_obstruction": 11.0,
+            "equipment_failure_ahead": 12.0
         }
         return mapping.get(value, 0.0)
 
@@ -177,10 +190,7 @@ class DecisionEngine:
         }
         return mapping.get(value, 0.0)
 
-    def _encode_corridor(self, value: str) -> float:
-        """Encode corridor as float (hash-based)."""
-        # Simple deterministic hash
-        return float(hash(value) % 100) / 100.0
+    # backend/app/core/decision_engine.py - Updated _ml_inference method
 
     def _ml_inference(self, request: IncidentRequest) -> Tuple[Decision, bool]:
         """Run ML inference. Returns (Decision, success)."""
@@ -189,22 +199,43 @@ class DecisionEngine:
 
         try:
             features = self._extract_features(request)
-            # Predict class and probabilities
-            pred = self.model.predict(features)[0]
-            probs = self.model.predict_proba(features)[0]
+
+            # Handle model saved as dict with label_encoder
+            if isinstance(self.model, dict):
+                model = self.model.get('model')
+                label_encoder = self.model.get('label_encoder')
+                if model is None:
+                    logger.error("❌ No 'model' key in saved model dict")
+                    return None, False
+            else:
+                model = self.model
+                label_encoder = None
+
+            # Make prediction
+            pred = model.predict(features)[0]
+            probs = model.predict_proba(features)[0]
             confidence = float(max(probs))
 
-            # Map prediction to action
-            action_map = {
-                0: "proceed_with_caution",
-                1: "reduce_speed",
-                2: "reroute",
-                3: "emergency_stop"
-            }
-            action = action_map.get(pred, "reduce_speed")
+            # Decode prediction
+            if label_encoder is not None:
+                pred_decoded = label_encoder.inverse_transform([pred])[0]
+            else:
+                # Fallback mapping (just in case)
+                action_map = {
+                    0: "proceed_with_caution",
+                    1: "reduce_speed",
+                    2: "reroute",
+                    3: "emergency_stop"
+                }
+                pred_decoded = action_map.get(pred, "reduce_speed")
+
+            # Map action to valid Action type
+            valid_actions = ["proceed_with_caution", "reduce_speed", "reroute", "emergency_stop"]
+            if pred_decoded not in valid_actions:
+                pred_decoded = "reduce_speed"
 
             return Decision(
-                action=action,
+                action=pred_decoded,  # type: ignore
                 confidence=confidence,
                 source="model",
                 reasons=[
@@ -219,7 +250,6 @@ class DecisionEngine:
 
     def _rule_fallback(self, request: IncidentRequest, physics: Physics) -> Decision:
         """Conservative rule-based fallback when ML is unavailable or low confidence."""
-        # If severity is high and stopping not possible
         if request.severity_score >= 6 and not physics.safe_stopping_possible:
             if request.distance_to_obstacle_km < 1.0:
                 return Decision(
@@ -244,7 +274,6 @@ class DecisionEngine:
                     ]
                 )
 
-        # If alternative route available
         if request.alternative_route_available and request.severity_score >= 5:
             return Decision(
                 action="reroute",
@@ -257,7 +286,6 @@ class DecisionEngine:
                 ]
             )
 
-        # Default: proceed with caution
         return Decision(
             action="proceed_with_caution",
             confidence=0.70,
@@ -270,10 +298,8 @@ class DecisionEngine:
 
     def evaluate(self, request: IncidentRequest) -> IncidentResponse:
         """Main entry point: evaluate incident and return decision."""
-        # Step 1: Calculate physics
         physics = self._calculate_physics(request)
 
-        # Step 2: Apply hard rules (override ML)
         hard_decision, hard_applied = self._hard_rule_decision(request, physics)
         if hard_applied:
             return IncidentResponse(
@@ -282,7 +308,6 @@ class DecisionEngine:
                 repair_defect_id=None
             )
 
-        # Step 3: ML inference
         ml_decision, ml_success = self._ml_inference(request)
         if ml_success and ml_decision.confidence >= 0.55:
             return IncidentResponse(
@@ -291,7 +316,6 @@ class DecisionEngine:
                 repair_defect_id=None
             )
 
-        # Step 4: Rule fallback (ML unavailable or low confidence)
         fallback_decision = self._rule_fallback(request, physics)
         return IncidentResponse(
             decision=fallback_decision,

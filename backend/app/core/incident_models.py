@@ -6,7 +6,11 @@ from enum import Enum
 # Type definitions
 EnvironmentalCondition = Literal["clear", "rain", "heavy_rain", "fog", "snow", "flood"]
 ObstructionType = Literal[
-    "landslide_debris", "boulder", "track_buckling", "fallen_tree", "stranded_vehicle", "water_logging", "cattle_crossing"]
+    "landslide_debris", "boulder", "track_buckling", "fallen_tree",
+    "stranded_vehicle", "water_logging", "cattle_crossing",
+    "broken_rail", "signal_cable_theft", "sensor_miscount",
+    "environmental_false_positive", "unknown_obstruction", "equipment_failure_ahead"
+]
 SensorType = Literal["track_circuit", "axle_counter", "vibration", "accelerometer"]
 SectionStatus = Literal["OCCUPIED", "CLEAR"]
 Action = Literal["proceed_with_caution", "reduce_speed", "reroute", "emergency_stop"]
@@ -43,6 +47,15 @@ class IncidentRequest(BaseModel):
     def validate_severity(cls, v):
         if v < 1 or v > 10:
             raise ValueError('severity_score must be between 1 and 10')
+        return v
+
+    # backend/app/core/incident_models.py - Updated field validator
+
+    @field_validator('environmental_condition', mode='before')
+    def normalize_environment(cls, v):
+        """Normalize 'dry' to 'clear' before validation."""
+        if v == "dry":
+            return "clear"
         return v
 
 
