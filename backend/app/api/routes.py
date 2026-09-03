@@ -3,18 +3,25 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import List, Optional
 from datetime import datetime, date, timedelta
 from uuid import UUID
+import uuid
+import logging
 from sqlmodel import Session
-from app.data.crud import CRUD
 from app.data.database import get_session
 from app.core.models import (
     Defect, Corridor, Block, SolveRequest, SolveResponse,
-    ScoreResponse, ImpactMetrics
+    ScoreResponse, ImpactMetrics, Department, DefectStatus
 )
+from app.core.incident_models import IncidentRequest, IncidentResponse
+from app.core.decision_engine import DecisionEngine
+from app.data.crud import CRUD
 from app.core.scoring import ScoringEngine
 from app.core.optimizer import Optimizer
 from app.adapters import (
     MockTMSAdapter, MockSMMSAdapter, MockTDMSAdapter, MockCOAAdapter
 )
+
+# Setup logger
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 scoring_engine = ScoringEngine()
@@ -111,7 +118,6 @@ async def get_defect_deferrals(
     if not defect:
         raise HTTPException(status_code=404, detail="Defect not found")
 
-    # Return deferral reasons from the defect's data
     return {
         "reasons": [
             {
@@ -132,7 +138,6 @@ async def score_all_defects(
     crud = CRUD(session)
     defects = crud.get_all_defects()
 
-    # Filter to only NEW and SCORED defects
     active_defects = [
         d for d in defects
         if str(d.status).upper() in ["NEW", "SCORED"]
@@ -149,16 +154,13 @@ async def create_defect(
     """Inject a new defect (for live demo)."""
     crud = CRUD(session)
 
-    # Score the defect
     scored = scoring_engine.score_defect(defect, date.today())
     defect.score = scored.score
 
-    # Save to database
     created = crud.create_defect(defect)
     return created
 
 
-# Keep old inject endpoint for backward compatibility
 @router.post("/defects/inject", response_model=Defect)
 async def inject_defect(
         defect: Defect,
@@ -193,24 +195,19 @@ async def solve_schedule(
     """Generate optimized schedule."""
     crud = CRUD(session)
 
-    # Get all data
     defects = crud.get_all_defects()
     corridors = crud.get_all_corridors()
 
-    # Get timetable and forecast data
     timetable = coa_adapter.get_timetable()
     goods_forecast = coa_adapter.get_goods_forecast()
 
-    # Get approved blocks
     all_blocks = crud.get_blocks(
         datetime.now(),
         datetime.now() + timedelta(days=horizon_days)
     )
 
-    # Filter approved blocks
     approved_blocks = [b for b in all_blocks if str(b.status).upper() == "APPROVED"]
 
-    # Create solve request
     request = SolveRequest(
         defects=defects,
         corridors=corridors,
@@ -223,10 +220,8 @@ async def solve_schedule(
         approved_blocks=approved_blocks
     )
 
-    # Run optimizer
     response = optimizer.solve(request)
 
-    # Save blocks to database
     for block in response.blocks:
         crud.create_block(block)
 
@@ -241,19 +236,15 @@ async def get_plan(
     """Get the plan (timeline data)."""
     crud = CRUD(session)
 
-    # Get blocks
     if solve_id:
-        # Try to get specific solve's blocks - if method doesn't exist, get all
         try:
             blocks = crud.get_blocks_by_solve(solve_id)
         except AttributeError:
-            # Fallback: get all blocks
             blocks = crud.get_blocks(
                 datetime.now(),
                 datetime.now() + timedelta(days=28)
             )
     else:
-        # Get latest blocks
         blocks = crud.get_blocks(
             datetime.now(),
             datetime.now() + timedelta(days=28)
@@ -282,7 +273,7 @@ async def get_plan(
             for block in blocks
         ],
         "occupancy": {
-            "trains": [],  # Train data can be added here
+            "trains": [],
             "goods": []
         }
     }
@@ -293,12 +284,10 @@ async def get_solves(session: Session = Depends(get_db)):
     """Get solve history."""
     crud = CRUD(session)
 
-    # Try to get solves, fallback to returning blocks
     try:
         solves = crud.get_all_solves()
         return solves
     except AttributeError:
-        # Fallback: return blocks grouped by solve_id
         blocks = crud.get_blocks(
             datetime.now() - timedelta(days=30),
             datetime.now()
@@ -327,24 +316,20 @@ async def get_impact_metrics(
     """Get impact metrics comparing baseline vs optimized."""
     crud = CRUD(session)
 
-    # Get all blocks from last 7 days
     start_date = datetime.now() - timedelta(days=7)
     end_date = datetime.now()
     blocks = crud.get_blocks(start_date, end_date)
 
-    # Calculate metrics
     total_blocks = len(blocks)
     total_hours = sum(b.duration_hours for b in blocks)
     combined_blocks = sum(1 for b in blocks if b.is_combined)
 
-    # Simulate baseline (how it's done today)
     baseline_blocks = int(total_blocks * 1.5) if total_blocks > 0 else 10
     baseline_hours = total_hours * 1.4 if total_hours > 0 else 20
 
     hours_saved = baseline_hours - total_hours
     percent_improvement = (hours_saved / baseline_hours * 100) if baseline_hours > 0 else 0
 
-    # Count safety critical handled
     safety_critical_handled = 0
     for block in blocks:
         for defect_id in block.defect_ids:
@@ -376,15 +361,12 @@ async def sync_from_adapters(session: Session = Depends(get_db)):
     """Sync data from all mock adapters."""
     crud = CRUD(session)
 
-    # Get data from each adapter
     tms_defects = tms_adapter.get_defects()
     smms_defects = smms_adapter.get_defects()
     tdms_defects = tdms_adapter.get_defects()
 
-    # Save to database
     all_defects = tms_defects + smms_defects + tdms_defects
     for defect in all_defects:
-        # Check if exists
         existing = crud.get_defect(defect.id)
         if not existing:
             crud.create_defect(defect)
@@ -397,6 +379,74 @@ async def sync_from_adapters(session: Session = Depends(get_db)):
             "tdms": len(tdms_defects)
         }
     }
+
+
+# ============================================================
+# INCIDENT / SENSOR DECISION ENDPOINT
+# ============================================================
+
+@router.post("/incident", response_model=IncidentResponse)
+async def handle_incident(
+        request: IncidentRequest,
+        session: Session = Depends(get_db)
+):
+    """
+    Handle real-time sensor incident, run decision engine,
+    and optionally bridge to the block planner as a repair defect.
+
+    This is the Bridge between Brain 1 (Sensor-Decision) and Brain 2 (Block Planner).
+
+    **Input:** 16 sensor features via IncidentRequest
+    **Output:** IncidentResponse with Decision, Physics, and optional repair_defect_id
+
+    **Bridge Logic:**
+    - If create_repair_defect=True, creates a safety-critical defect in the planner
+    - Severity mapping: 1-10 → 1-5 using min(5, 1 + severity_score // 2)
+    - Always flags as safety_critical=True with score=100.0
+    """
+    try:
+        # 1. Run the decision engine for immediate ML/Physics response
+        engine = DecisionEngine()
+        response = engine.evaluate(request)
+
+        # 2. Bridge to Block Planner if requested
+        if request.create_repair_defect:
+            crud = CRUD(session)
+
+            # CRITICAL MAPPING: Map 1-10 incident severity down to 1-5 planner severity
+            mapped_severity = min(5, 1 + request.severity_score // 2)
+
+            # Create defect description
+            desc = f"Sensor incident: {request.obstruction_type.replace('_', ' ').title()} at {request.distance_to_obstacle_km}km"
+
+            new_defect = Defect(
+                id=uuid.uuid4(),
+                defect_id=f"INC-{uuid.uuid4().hex[:6].upper()}",
+                description=desc,
+                department=Department.TRACK,  # Default to Track for physical obstructions
+                severity=mapped_severity,
+                overdue_days=0,
+                traffic_impact=5 if request.severity_score >= 8 else 3,
+                safety_critical=True,  # CRITICAL: Incident bridge ALWAYS flags as safety critical
+                corridor_id=request.corridor,
+                system_source="SENSOR_ML",
+                status=DefectStatus.NEW,
+                score=100.0  # Ensures top priority in existing planner sorting logic
+            )
+
+            # Save to existing database
+            created_defect = crud.create_defect(new_defect)
+
+            # Attach the bridge ID to the response
+            response.repair_defect_id = str(created_defect.id)
+
+            logger.info(f"🔗 Bridged incident to repair defect: {created_defect.id}")
+
+        return response
+
+    except Exception as e:
+        logger.error(f"❌ Incident handling failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================
@@ -468,3 +518,12 @@ async def v1_get_impact_metrics(
 async def v1_sync_from_adapters(session: Session = Depends(get_db)):
     """Legacy v1 endpoint - Sync data from all mock adapters."""
     return await sync_from_adapters(session)
+
+
+@router.post("/v1/incident", response_model=IncidentResponse)
+async def v1_handle_incident(
+        request: IncidentRequest,
+        session: Session = Depends(get_db)
+):
+    """Legacy v1 endpoint - Handle real-time sensor incident."""
+    return await handle_incident(request, session)
