@@ -1,39 +1,44 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.api.routes import router
+from app.data.database import create_db_and_tables
+from contextlib import asynccontextmanager
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    create_db_and_tables()
+    print("✅ Database initialized")
+    yield
+    # Shutdown
+    print("👋 Shutting down")
+
 
 app = FastAPI(
-    title="The Flow API",
-    description="Railway Block Planning System",
-    version="0.1.0"
+    title="AI Block Planning System API",
+    description="Railway maintenance scheduling API",
+    version="1.0.0",
+    lifespan=lifespan
 )
 
-# Enable CORS for frontend
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-@app.get("/")
-async def root():
-    return {
-        "message": "🚂 The Flow API is running!",
-        "status": "healthy"
-    }
+# Include routes
+app.include_router(router, prefix="/api/v1")
 
-@app.get("/api/health")
+@app.get("/health")
 async def health_check():
-    return {"status": "healthy", "service": "the-flow-backend"}
+    return {"status": "healthy", "version": "1.0.0"}
 
-@app.get("/api/defects")
-async def get_defects():
-    """Get all defects (mock data for now)"""
-    return {
-        "defects": [
-            {"id": 1, "department": "Track", "severity": "High", "description": "Crack in rail at KM 45"},
-            {"id": 2, "department": "Power", "severity": "Critical", "description": "Overhead wire damage"},
-            {"id": 3, "department": "Signals", "severity": "Medium", "description": "Signal light malfunction"}
-        ]
-    }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
