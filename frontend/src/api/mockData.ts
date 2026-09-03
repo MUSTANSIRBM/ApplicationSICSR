@@ -198,3 +198,20 @@ export const mockSolveResult = (defect: InjectionDefect): SolveResult => ({
   explanation: `Emergency ${defect.department} defect injected. Re-solved with 2 blocks moved to accommodate the new priority task.`,
   confidence: 94,
 });
+
+// src/api/mockData.ts - Add this function at the end
+// Add a function to update mock data dynamically
+
+let currentDefects = generateDefects(30);
+let currentBlocks = generateBlocks(currentDefects);
+
+export const updateMockDefects = (newDefects: Defect[]) => {
+  currentDefects = newDefects;
+};
+
+export const updateMockBlocks = (newBlocks: ScheduleBlock[]) => {
+  currentBlocks = newBlocks;
+};
+
+export const getCurrentDefects = () => currentDefects;
+export const getCurrentBlocks = () => currentBlocks;

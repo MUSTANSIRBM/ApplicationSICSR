@@ -3,13 +3,7 @@ import {
   Defect, FilterParams, TimelineData, ImpactData, SystemStatus, 
   InjectionDefect, SolveResult, ScheduleBlock 
 } from '@/types';
-import {
-  mockDefects,
-  mockTimelineData,
-  mockImpactData,
-  mockSystemStatus,
-  mockSolveResult,
-} from './mockData';
+import { getCurrentDefects, getCurrentBlocks, mockTimelineData, mockImpactData, mockSystemStatus, mockSolveResult } from './mockData';
 
 const USE_MOCK = true;
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -19,18 +13,18 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export const api = {
   // Defects
   async getDefects(params?: FilterParams): Promise<Defect[]> {
-    if (USE_MOCK) {
-      await delay(300);
-      let data = [...mockDefects];
-      if (params?.department) data = data.filter(d => d.department === params.department);
-      if (params?.corridor) data = data.filter(d => d.corridor === params.corridor);
-      if (params?.tier) data = data.filter(d => d.tier === params.tier);
-      if (params?.search) {
-        const s = params.search.toLowerCase();
-        data = data.filter(d => d.description.toLowerCase().includes(s));
-      }
-      return data;
+  if (USE_MOCK) {
+    await delay(300);
+    let data = [...getCurrentDefects()];
+    if (params?.department) data = data.filter(d => d.department === params.department);
+    if (params?.corridor) data = data.filter(d => d.corridor === params.corridor);
+    if (params?.tier) data = data.filter(d => d.tier === params.tier);
+    if (params?.search) {
+      const s = params.search.toLowerCase();
+      data = data.filter(d => d.description.toLowerCase().includes(s));
     }
+    return data;
+  }
     const qs = new URLSearchParams(params as any);
     const res = await fetch(`${API_BASE}/defects?${qs}`);
     return res.json();
@@ -60,10 +54,14 @@ export const api = {
 
   // Schedule
   async getSchedule(week: string): Promise<TimelineData> {
-    if (USE_MOCK) {
-      await delay(400);
-      return { ...mockTimelineData };
-    }
+  if (USE_MOCK) {
+    await delay(400);
+    return { 
+      ...mockTimelineData, 
+      blocks: getCurrentBlocks(),
+      weekStart: week,
+    };
+  }
     const res = await fetch(`${API_BASE}/schedule?week=${week}`);
     return res.json();
   },
@@ -145,3 +143,4 @@ export const api = {
     return res.json();
   },
 };
+

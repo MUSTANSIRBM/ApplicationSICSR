@@ -1,44 +1,47 @@
 // src/pages/board.tsx
 import { useEffect, useState } from 'react';
 import { DefectList } from '@/components/board/DefectList';
-import { api } from '@/api/client';
 import { Defect, FilterParams } from '@/types';
+import { useStore } from '@/store/useStore';
 import toast from 'react-hot-toast';
 
 export default function BoardPage() {
-  const [defects, setDefects] = useState<Defect[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState<FilterParams>({});
+  const { 
+    defects, 
+    loading, 
+    filters, 
+    searchQuery,
+    loadDefects, 
+    scheduleDefect, 
+    deferDefect, 
+    setFilters, 
+    setSearchQuery 
+  } = useStore();
 
   useEffect(() => {
     loadDefects();
-  }, [filters]);
-
-  const loadDefects = async () => {
-    setLoading(true);
-    try {
-      const data = await api.getDefects(filters);
-      setDefects(data);
-    } catch (error) {
-      toast.error('Failed to load defects');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, []);
 
   const handleSchedule = async (id: string) => {
     try {
-      await api.scoreDefect(id);
-      toast.success(`Defect ${id} scheduled`);
-      loadDefects();
+      await scheduleDefect(id);
+      toast.success(`✅ Defect ${id} scheduled successfully`);
     } catch (error) {
-      toast.error('Failed to schedule');
+      toast.error('❌ Failed to schedule defect');
     }
   };
 
   const handleDefer = async (id: string) => {
-    toast.success(`Defect ${id} deferred with reason`);
-    loadDefects();
+    try {
+      await deferDefect(id);
+      toast.success(`⏳ Defect ${id} deferred`);
+    } catch (error) {
+      toast.error('❌ Failed to defer defect');
+    }
+  };
+
+  const handleFilterChange = (newFilters: FilterParams) => {
+    setFilters(newFilters);
   };
 
   return (
@@ -61,9 +64,11 @@ export default function BoardPage() {
         <DefectList
           defects={defects}
           filters={filters}
-          onFilterChange={setFilters}
+          onFilterChange={handleFilterChange}
           onSchedule={handleSchedule}
           onDefer={handleDefer}
+          onSearch={setSearchQuery}
+          searchQuery={searchQuery}
         />
       )}
     </div>

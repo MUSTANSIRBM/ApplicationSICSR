@@ -1,43 +1,51 @@
-// frontend/src/components/shared/StatusBar.tsx
-import { useEffect, useState } from 'react';
-import { api } from '@/api/client';
-import { SystemStatus } from '@/types';
+// src/components/shared/StatusBar.tsx
+import { useEffect } from 'react';
+import { useStore } from '@/store/useStore';
 
 export function StatusBar() {
-  const [status, setStatus] = useState<SystemStatus | null>(null);
+  const { systemStatus, loadStatus } = useStore();
 
   useEffect(() => {
-    api.getStatus().then(setStatus);
-    const interval = setInterval(() => api.getStatus().then(setStatus), 10000);
+    loadStatus();
+    const interval = setInterval(loadStatus, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [loadStatus]);
 
-  if (!status) return null;
+  if (!systemStatus) {
+    return (
+      <div className="bg-gray-50 border-t border-gray-200 px-4 py-1.5 text-xs text-gray-400">
+        Loading status...
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gray-50 border-t border-gray-200 px-4 py-1.5 text-xs text-gray-600 flex items-center justify-between">
       <div className="flex items-center gap-4">
         <span className="flex items-center gap-1">
           <span className="font-medium">Tasks:</span>
-          {status.totalTasks}
+          <span className="text-gray-700">{systemStatus.totalTasks}</span>
         </span>
         <span className="flex items-center gap-1">
           <span className="font-medium text-red-500">Critical:</span>
-          {status.criticalWaiting}
+          <span className="text-red-600">{systemStatus.criticalWaiting}</span>
         </span>
         <span className="flex items-center gap-1">
           <span className="font-medium">Conflicts Resolved:</span>
-          {status.conflictsResolved}
+          <span className="text-gray-700">{systemStatus.conflictsResolved}</span>
         </span>
         <span className="flex items-center gap-1">
           <span className="font-medium">Week Savings:</span>
-          <span className="text-green-600">{status.weekSavings}h</span>
+          <span className="text-green-600 font-semibold">{systemStatus.weekSavings}h</span>
         </span>
       </div>
-      <div className="flex items-center gap-1">
-        <span>Last solve:</span>
-        <span className="font-medium">{status.lastSolveTime}s ago</span>
+      <div className="flex items-center gap-3">
+        <span className="flex items-center gap-1">
+          <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+          <span className="text-green-600">Live</span>
+        </span>
+        <span>Last solve: <span className="font-medium">{systemStatus.lastSolveTime}s ago</span></span>
       </div>
     </div>
   );
-}
+} 

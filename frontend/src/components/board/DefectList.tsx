@@ -1,4 +1,4 @@
-// frontend/src/components/board/DefectList.tsx
+// src/components/board/DefectList.tsx
 import { useState } from 'react';
 import { clsx } from 'clsx';
 import { Defect, FilterParams } from '@/types';
@@ -11,17 +11,24 @@ interface DefectListProps {
   onFilterChange: (filters: FilterParams) => void;
   onSchedule: (id: string) => void;
   onDefer: (id: string) => void;
+  onSearch: (query: string) => void;
+  searchQuery: string;
 }
 
 const departments = ['all', 'track', 'power', 'signals'] as const;
 const tiers = ['all', 'safety-critical', 'high', 'normal', 'deferred'] as const;
 
-export function DefectList({ defects, filters, onFilterChange, onSchedule, onDefer }: DefectListProps) {
-  const [search, setSearch] = useState('');
-
+export function DefectList({ 
+  defects, 
+  filters, 
+  onFilterChange, 
+  onSchedule, 
+  onDefer,
+  onSearch,
+  searchQuery 
+}: DefectListProps) {
   const handleSearch = (value: string) => {
-    setSearch(value);
-    onFilterChange({ ...filters, search: value });
+    onSearch(value);
   };
 
   const groupedDefects = defects.reduce((acc, d) => {
@@ -38,17 +45,21 @@ export function DefectList({ defects, filters, onFilterChange, onSchedule, onDef
         <div className="flex-1 min-w-[200px]">
           <input
             type="text"
-            placeholder="Search defects..."
-            value={search}
+            placeholder="🔍 Search defects..."
+            value={searchQuery}
             onChange={(e) => handleSearch(e.target.value)}
             className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-wrap">
+          <span className="text-xs text-gray-400 mr-1">Dept:</span>
           {departments.map((dept) => (
             <button
               key={dept}
-              onClick={() => onFilterChange({ ...filters, department: dept === 'all' ? undefined : dept })}
+              onClick={() => onFilterChange({ 
+                ...filters, 
+                department: dept === 'all' ? undefined : dept 
+              })}
               className={clsx(
                 'px-2 py-1 text-xs rounded-md transition-colors capitalize',
                 (filters.department === dept || (dept === 'all' && !filters.department))
@@ -60,11 +71,15 @@ export function DefectList({ defects, filters, onFilterChange, onSchedule, onDef
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 flex-wrap">
+          <span className="text-xs text-gray-400 mr-1">Tier:</span>
           {tiers.map((tier) => (
             <button
               key={tier}
-              onClick={() => onFilterChange({ ...filters, tier: tier === 'all' ? undefined : tier })}
+              onClick={() => onFilterChange({ 
+                ...filters, 
+                tier: tier === 'all' ? undefined : tier 
+              })}
               className={clsx(
                 'px-2 py-1 text-xs rounded-md transition-colors capitalize',
                 (filters.tier === tier || (tier === 'all' && !filters.tier))

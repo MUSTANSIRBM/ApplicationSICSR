@@ -4,8 +4,20 @@ import { Toaster } from 'react-hot-toast';
 import { TopNav } from '@/components/shared/TopNav';
 import { StatusBar } from '@/components/shared/StatusBar';
 import '@/styles/globals.css';
+import { useEffect } from 'react';
+import { useStore } from '@/store/useStore';
 
 export default function App({ Component, pageProps }: AppProps) {
+  const loadStatus = useStore(state => state.loadStatus);
+
+  useEffect(() => {
+    // Load system status on app start
+    loadStatus();
+    // Refresh status every 10 seconds
+    const interval = setInterval(loadStatus, 10000);
+    return () => clearInterval(interval);
+  }, [loadStatus]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Toaster

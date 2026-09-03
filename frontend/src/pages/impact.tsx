@@ -1,39 +1,35 @@
 // src/pages/impact.tsx
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { MetricCard } from '@/components/impact/MetricCard';
 import { SavingsChart } from '@/components/impact/SavingsChart';
-import { api } from '@/api/client';
-import { ImpactData } from '@/types';
+import { useStore } from '@/store/useStore';
 import toast from 'react-hot-toast';
 
 export default function ImpactPage() {
-  const [data, setData] = useState<ImpactData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { impactData, selectedWeek, loadImpact } = useStore();
 
   useEffect(() => {
-    loadImpact();
-  }, []);
+    loadImpact(selectedWeek);
+  }, [selectedWeek]);
 
-  const loadImpact = async () => {
-    setLoading(true);
+  const handleRefresh = async () => {
     try {
-      const week = new Date().toISOString();
-      const data = await api.getImpact(week);
-      setData(data);
+      await loadImpact(selectedWeek);
+      toast.success('📊 Data refreshed');
     } catch (error) {
-      toast.error('Failed to load impact data');
-    } finally {
-      setLoading(false);
+      toast.error('❌ Failed to refresh data');
     }
   };
 
-  if (loading || !data) {
+  if (!impactData) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="spinner h-8 w-8" />
       </div>
     );
   }
+
+  const data = impactData;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
@@ -42,9 +38,17 @@ export default function ImpactPage() {
           <h1 className="text-2xl font-bold text-gray-900">Impact Dashboard</h1>
           <p className="text-sm text-gray-500">{data.week}</p>
         </div>
-        <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-          Export PDF →
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={handleRefresh}
+            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+          >
+            🔄 Refresh
+          </button>
+          <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+            📄 Export PDF
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -99,7 +103,7 @@ export default function ImpactPage() {
                 </div>
                 <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden mt-0.5">
                   <div
-                    className="h-full rounded-full"
+                    className="h-full rounded-full transition-all duration-500"
                     style={{
                       width: `${(hours / Math.max(...Object.values(data.byDepartment))) * 100}%`,
                       backgroundColor: dept === 'track' ? '#F97316' : dept === 'power' ? '#EAB308' : '#3B82F6'
@@ -108,6 +112,15 @@ export default function ImpactPage() {
                 </div>
               </div>
             ))}
+          </div>
+          
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="text-sm text-gray-600">
+              <span className="font-medium">Total savings breakdown:</span>
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              Bundling: {data.breakdown.bundling}h · Better Timing: {data.breakdown.betterTiming}h
+            </div>
           </div>
         </div>
       </div>
