@@ -1,5 +1,6 @@
 // src/pages/_app.tsx
 import type { AppProps } from 'next/app';
+<<<<<<< HEAD
 import { Toaster } from 'react-hot-toast';
 import { TopNav } from '@/components/shared/TopNav';
 import { StatusBar } from '@/components/shared/StatusBar';
@@ -48,3 +49,18 @@ export default function App({ Component, pageProps }: AppProps) {
     </div>
   );
 }
+=======
+import { TopNav } from '@/components/shared/TopNav';
+import { StatusBar } from '@/components/shared/StatusBar';
+import '@/styles/globals.css';
+
+export default function App({ Component, pageProps }: AppProps) {
+  return (
+    <>
+      <TopNav />
+      <Component {...pageProps} />
+      <StatusBar />
+    </>
+  );
+}
+>>>>>>> d417a201a471c0ad76e541f6f735a1b7a28ec5b1
