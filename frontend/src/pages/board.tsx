@@ -1,4 +1,4 @@
-// frontend/src/pages/board.tsx
+// src/pages/board.tsx
 import { useEffect, useState } from 'react';
 import { DefectList } from '@/components/board/DefectList';
 import { api } from '@/api/client';

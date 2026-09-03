@@ -1,4 +1,4 @@
-// frontend/src/pages/plan.tsx
+// src/pages/plan.tsx
 import { useEffect, useState } from 'react';
 import { Timeline } from '@/components/plan/Timeline';
 import { api } from '@/api/client';

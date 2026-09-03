@@ -1,4 +1,4 @@
-// frontend/src/pages/_app.tsx
+// src/pages/_app.tsx
 import type { AppProps } from 'next/app';
 import { Toaster } from 'react-hot-toast';
 import { TopNav } from '@/components/shared/TopNav';
