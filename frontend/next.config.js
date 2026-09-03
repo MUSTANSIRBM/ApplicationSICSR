@@ -1,8 +1,15 @@
-// frontend/next.config.js
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  reactStrictMode: true,
+// next.config.js improvements
+module.exports = {
+  // Image optimization
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+  },
+  // Bundle optimization
   swcMinify: true,
-};
-
-module.exports = nextConfig;
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
+  // Analytics
+  analyticsId: process.env.VERCEL_ANALYTICS_ID,
+}
