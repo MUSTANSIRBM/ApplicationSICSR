@@ -3,6 +3,7 @@ from typing import Optional
 from datetime import datetime, date
 from uuid import UUID, uuid4
 import os
+from contextlib import contextmanager
 
 # Database setup
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./app.db")
@@ -11,7 +12,7 @@ engine = create_engine(DATABASE_URL, echo=True)
 
 class DefectDB(SQLModel, table=True):
     __tablename__ = "defects"
-    
+
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     defect_id: str = Field(index=True)
     description: str
@@ -33,7 +34,7 @@ class DefectDB(SQLModel, table=True):
 
 class CorridorDB(SQLModel, table=True):
     __tablename__ = "corridors"
-    
+
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     corridor_id: str = Field(index=True, unique=True)
     name: str
@@ -44,7 +45,7 @@ class CorridorDB(SQLModel, table=True):
 
 class TimetableSlotDB(SQLModel, table=True):
     __tablename__ = "timetable_slots"
-    
+
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     corridor_id: str = Field(index=True)
     train_id: str = Field(index=True)
@@ -56,7 +57,7 @@ class TimetableSlotDB(SQLModel, table=True):
 
 class GoodsForecastDB(SQLModel, table=True):
     __tablename__ = "goods_forecast"
-    
+
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     corridor_id: str = Field(index=True)
     train_id: str = Field(index=True)
@@ -67,7 +68,7 @@ class GoodsForecastDB(SQLModel, table=True):
 
 class BlockDB(SQLModel, table=True):
     __tablename__ = "blocks"
-    
+
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     corridor_id: str = Field(index=True)
     start_time: datetime
@@ -85,6 +86,7 @@ def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
 
 
+@contextmanager
 def get_session():
     with Session(engine) as session:
         yield session
