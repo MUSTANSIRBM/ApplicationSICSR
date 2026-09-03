@@ -1,4 +1,4 @@
-// frontend/tailwind.config.js
+// tailwind.config.js
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
@@ -27,6 +27,8 @@ module.exports = {
         'slide-down': 'slideDown 0.3s ease-out',
         'fade-in': 'fadeIn 0.3s ease-out',
         'pulse-glow': 'pulseGlow 1.5s ease-in-out infinite',
+        'bounce-in': 'bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+        'spin-slow': 'spin 3s linear infinite',
       },
       keyframes: {
         slideUp: {
@@ -45,8 +47,21 @@ module.exports = {
           '0%, 100%': { boxShadow: '0 0 20px rgba(239, 68, 68, 0.4)' },
           '50%': { boxShadow: '0 0 40px rgba(239, 68, 68, 0.8)' },
         },
+        bounceIn: {
+          '0%': { transform: 'scale(0.3)', opacity: '0' },
+          '50%': { transform: 'scale(1.05)' },
+          '70%': { transform: 'scale(0.9)' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+      },
+      boxShadow: {
+        'soft': '0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04)',
+        'glow': '0 0 40px rgba(59, 130, 246, 0.15)',
+      },
+      fontFamily: {
+        mono: ['SF Mono', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
       },
     },
   },
   plugins: [],
-}
+};

@@ -1,4 +1,5 @@
-// frontend/src/types/index.ts
+// src/types/index.ts
+
 export interface Defect {
   id: string;
   department: 'track' | 'power' | 'signals';
@@ -9,10 +10,14 @@ export interface Defect {
   trafficImpact: number;
   score: number;
   tier: 'safety-critical' | 'high' | 'normal' | 'deferred';
-  status: 'new' | 'scored' | 'scheduled' | 'approved' | 'completed';
+  status: 'new' | 'scored' | 'scheduled' | 'approved' | 'completed' | 'deferred';
+  impactScore?: number; // Alias for score
+  scheduledWeek?: string;
+  deferReason?: string;
+  createdAt: string;
+  updatedAt?: string;
   availableSlots?: TimeSlot[];
   bundleSuggestions?: Defect[];
-  createdAt: string;
 }
 
 export interface TimeSlot {
@@ -29,11 +34,18 @@ export interface ScheduleBlock {
   startTime: string;
   endTime: string;
   defects: Defect[];
-  status: 'proposed' | 'approved' | 'locked' | 'executed';
+  status: 'proposed' | 'pending' | 'approved' | 'locked' | 'executed';
   isCombined: boolean;
   combinedDepartments?: string[];
   duration: number;
   savings: number;
+  // Additional properties used in the code
+  description?: string;
+  weekStart?: string;
+  priority?: number;
+  assignedTo?: string;
+  updatedAt?: string;
+  defectId?: string;
 }
 
 export interface TrainSlot {
@@ -109,9 +121,45 @@ export interface FilterParams {
   department?: 'track' | 'power' | 'signals';
   corridor?: string;
   tier?: 'safety-critical' | 'high' | 'normal' | 'deferred';
+  status?: 'new' | 'scored' | 'scheduled' | 'approved' | 'completed' | 'deferred';
   search?: string;
 }
 
 export type Department = 'track' | 'power' | 'signals';
 export type Tier = 'safety-critical' | 'high' | 'normal' | 'deferred';
-export type BlockStatus = 'proposed' | 'approved' | 'locked' | 'executed';
+export type BlockStatus = 'proposed' | 'pending' | 'approved' | 'locked' | 'executed';
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: 'admin' | 'user' | 'viewer';
+  avatar?: string;
+  createdAt: string;
+}
+
+export interface AuthState {
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  token: string | null;
+}
+
+export interface LoginCredentials {
+  email: string;
+  password: string;
+  rememberMe?: boolean;
+}
+
+export interface RegisterData {
+  name: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+export interface AuthResponse {
+  user: User;
+  token: string;
+  expiresIn: number;
+}

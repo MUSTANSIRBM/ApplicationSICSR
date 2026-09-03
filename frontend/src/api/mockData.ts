@@ -1,161 +1,105 @@
-import { Defect, TimelineData, ImpactData, SystemStatus, InjectionDefect, SolveResult, ScheduleBlock, TrainSlot } from '@/types';
+// src/api/mockData.ts
+import { Defect, ScheduleBlock, TimelineData, ImpactData, SystemStatus, InjectionDefect, SolveResult, FilterParams, TrainSlot } from '@/types';
 
-const today = new Date();
-const weekStart = new Date(today);
-weekStart.setDate(today.getDate() - today.getDay());
-
-const corridors = ['A', 'B', 'C', 'D', 'E'];
-const departments: ('track' | 'power' | 'signals')[] = ['track', 'power', 'signals'];
-
-const defectDescriptions: Record<string, string[]> = {
-  track: [
-    'Crack detected at KM 42',
-    'Rail wear at curve section',
-    'Frog failure at junction',
-    'Missing fish plates',
-    'Track misalignment',
-  ],
-  power: [
-    'Overhead wire wear',
-    'Transformer overheating',
-    'Circuit breaker failure',
-    'Insulator crack',
-    'Voltage fluctuation',
-  ],
-  signals: [
-    'Signal lamp failure',
-    'Circuit relay malfunction',
-    'Cable insulation breakdown',
-    'Point machine defect',
-    'Track circuit failure',
-  ],
+// Helper to calculate defect score
+const calculateDefectScore = (defect: Defect): number => {
+  let score = 0;
+  if (defect.tier === 'safety-critical') score += 40;
+  else if (defect.tier === 'high') score += 30;
+  else if (defect.tier === 'normal') score += 20;
+  else score += 10;
+  score += Math.min(defect.impactScore || defect.severity || 0, 60);
+  return Math.min(score, 100);
 };
 
-function random(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function randomDate(start: Date, days: number): string {
-  const d = new Date(start);
-  d.setDate(d.getDate() + random(0, days));
-  return d.toISOString();
-}
-
-// Centralized score calculation
-export function calculateDefectScore(defect: {
-  severity: number;
-  overdueDays: number;
-  trafficImpact: number;
-}): number {
-  const MAX_SEVERITY = 100;
-  const MAX_OVERDUE_DAYS = 30;
-  const MAX_TRAFFIC_IMPACT = 100;
-  const severityWeight = 0.5;
-  const overdueWeight = 0.3;
-  const trafficWeight = 0.2;
-
-  const severityContrib = (defect.severity / MAX_SEVERITY) * severityWeight * 100;
-  const overdueContrib = (Math.min(defect.overdueDays, MAX_OVERDUE_DAYS) / MAX_OVERDUE_DAYS) * overdueWeight * 100;
-  const trafficContrib = (defect.trafficImpact / MAX_TRAFFIC_IMPACT) * trafficWeight * 100;
-  
-  return severityContrib + overdueContrib + trafficContrib;
-}
-
+// Generate mock defects
 function generateDefects(count: number): Defect[] {
-  const defects: Defect[] = [];
-  const tiers: ('safety-critical' | 'high' | 'normal' | 'deferred')[] = [
-    'normal', 'normal', 'normal', 'high', 'high', 'safety-critical',
+  const departments: Array<'track' | 'power' | 'signals'> = ['track', 'power', 'signals'];
+  const corridors = ['A-12', 'B-07', 'C-04', 'D-09', 'E-15', 'F-03'];
+  const tiers: Array<'safety-critical' | 'high' | 'normal' | 'deferred'> = ['safety-critical', 'high', 'normal', 'deferred'];
+  const statuses: Array<'new' | 'scored' | 'scheduled' | 'approved' | 'completed' | 'deferred'> = ['new', 'new', 'new', 'scheduled', 'deferred'];
+  const descriptions = [
+    'Track misalignment detected',
+    'Power supply fluctuation in corridor',
+    'Signal failure at junction',
+    'Track wear beyond threshold',
+    'Communication system failure',
+    'Rail crack detected',
+    'Switch mechanism malfunction',
+    'Circuit breaker tripped',
+    'Sensor calibration required',
+    'Structural integrity issue'
   ];
 
+  const defects: Defect[] = [];
   for (let i = 0; i < count; i++) {
-    const dept = departments[random(0, 2)];
-    const descs = defectDescriptions[dept];
-    const tier = tiers[random(0, tiers.length - 1)];
-    const severity = tier === 'safety-critical' ? random(85, 100) : random(20, 80);
-    const overdueDays = random(0, 14);
-    const trafficImpact = random(10, 90);
-    
-    const defect: Defect = {
+    const tier = tiers[Math.floor(Math.random() * tiers.length)];
+    const severity = Math.floor(Math.random() * 80) + 20;
+    const impactScore = Math.floor(Math.random() * 80) + 20;
+    defects.push({
       id: `D-${String(i + 1).padStart(3, '0')}`,
-      department: dept,
-      corridor: corridors[random(0, 4)],
-      description: descs[random(0, descs.length - 1)],
-      severity,
-      overdueDays,
-      trafficImpact,
-      score: 0, // Will be calculated below
-      tier,
-      status: ['new', 'scored', 'scheduled', 'approved'][random(0, 3)] as any,
-      createdAt: randomDate(new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000), 30),
-      availableSlots: [],
-      bundleSuggestions: [],
-    };
-    
-    // Calculate score properly
-    defect.score = calculateDefectScore(defect);
-    defects.push(defect);
+      description: descriptions[Math.floor(Math.random() * descriptions.length)],
+      department: departments[Math.floor(Math.random() * departments.length)],
+      corridor: corridors[Math.floor(Math.random() * corridors.length)],
+      tier: tier,
+      severity: severity,
+      impactScore: impactScore,
+      score: calculateDefectScore({ tier, impactScore, severity } as Defect),
+      status: statuses[Math.floor(Math.random() * statuses.length)],
+      createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+      overdueDays: Math.floor(Math.random() * 30),
+      trafficImpact: Math.floor(Math.random() * 100),
+    });
   }
   return defects;
 }
 
+// Generate blocks from defects
 function generateBlocks(defects: Defect[]): ScheduleBlock[] {
-  const blocks: ScheduleBlock[] = [];
-  
-  const shuffled = [...defects].sort(() => Math.random() - 0.5);
-  const chunked = [];
-  for (let i = 0; i < shuffled.length; i += 2) {
-    chunked.push(shuffled.slice(i, i + 2));
-  }
-
-  chunked.forEach((chunk, idx) => {
-    const corridor = corridors[idx % corridors.length];
-    const startHour = 8 + (idx % 8);
-    const startDate = new Date(weekStart);
-    startDate.setDate(startDate.getDate() + Math.floor(idx / 8));
-    startDate.setHours(startHour, 0, 0, 0);
-
-    const duration = random(1, 4);
-    const endDate = new Date(startDate);
-    endDate.setHours(endDate.getHours() + duration);
-
-    const depts = chunk.map(d => d.department);
-    const isCombined = depts.length > 1 && depts.every(d => d === depts[0]);
-
-    blocks.push({
-      id: `B-${String(idx + 1).padStart(3, '0')}`,
-      corridor,
-      department: isCombined ? 'combined' : depts[0],
-      startTime: startDate.toISOString(),
-      endTime: endDate.toISOString(),
-      defects: chunk,
-      status: ['proposed', 'approved', 'locked'][random(0, 2)] as any,
-      isCombined,
-      combinedDepartments: isCombined ? depts : undefined,
-      duration,
-      savings: isCombined ? duration * 0.6 : 0,
-    });
+  const scheduledDefects = defects.filter(d => d.status === 'scheduled' || d.status === 'approved');
+  return scheduledDefects.map((defect, index) => {
+    const startTime = new Date();
+    startTime.setHours(8 + (index % 8), 0, 0, 0);
+    const endTime = new Date(startTime);
+    endTime.setHours(startTime.getHours() + 2 + Math.floor(Math.random() * 4));
+    
+    return {
+      id: `B-${String(index + 1).padStart(3, '0')}`,
+      corridor: defect.corridor || 'A-12',
+      department: defect.department,
+      startTime: startTime.toISOString(),
+      endTime: endTime.toISOString(),
+      defects: [defect],
+      status: 'proposed',
+      isCombined: Math.random() > 0.7,
+      duration: Math.floor(Math.random() * 4) + 2,
+      savings: Math.random() > 0.7 ? Math.floor(Math.random() * 3) + 1 : 0,
+      description: defect.description,
+      weekStart: new Date().toISOString(),
+      priority: defect.tier === 'safety-critical' ? 1 : defect.tier === 'high' ? 2 : 3,
+      assignedTo: defect.department,
+      defectId: defect.id,
+    };
   });
-
-  return blocks;
 }
 
+// Generate train slots
 function generateTrainSlots(): TrainSlot[] {
   const slots: TrainSlot[] = [];
-  const trainNumbers = ['12001', '12002', '12907', '12908', '12259', '12260'];
+  const corridors = ['A-12', 'B-07', 'C-04', 'D-09', 'E-15', 'F-03'];
+  const trainTypes: Array<'passenger' | 'goods'> = ['passenger', 'goods'];
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  let idCounter = 1;
   
-  for (let day = 0; day < 7; day++) {
-    for (let i = 0; i < 3; i++) {
-      const d = new Date(weekStart);
-      d.setDate(d.getDate() + day);
-      d.setHours(6 + i * 4, 0, 0, 0);
-      
+  for (let day of days) {
+    for (let hour = 6; hour < 22; hour += 2) {
       slots.push({
-        id: `T-${String(slots.length + 1).padStart(3, '0')}`,
-        corridor: corridors[slots.length % 5],
-        startTime: d.toISOString(),
-        endTime: new Date(d.getTime() + 2 * 60 * 60 * 1000).toISOString(),
-        trainType: i % 2 === 0 ? 'passenger' : 'goods',
-        trainNumber: trainNumbers[slots.length % trainNumbers.length],
+        id: `T-${String(idCounter++).padStart(3, '0')}`,
+        corridor: corridors[Math.floor(Math.random() * corridors.length)],
+        startTime: new Date().toISOString(),
+        endTime: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+        trainType: trainTypes[Math.floor(Math.random() * trainTypes.length)],
+        trainNumber: `TR-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`,
       });
     }
   }
@@ -163,16 +107,20 @@ function generateTrainSlots(): TrainSlot[] {
 }
 
 // Initial data
-let currentDefects = generateDefects(30);
-let currentBlocks = generateBlocks(currentDefects);
+const weekStart = new Date();
+weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
 
-export const mockDefects = currentDefects;
-export const mockBlocks = currentBlocks;
-export const mockTrainSlots = generateTrainSlots();
+const corridors = ['A-12', 'B-07', 'C-04', 'D-09', 'E-15', 'F-03'];
 
+// State
+let mockDefects: Defect[] = generateDefects(30);
+let mockBlocks: ScheduleBlock[] = generateBlocks(mockDefects);
+const mockTrainSlots: TrainSlot[] = generateTrainSlots();
+
+// Mock data exports
 export const mockTimelineData: TimelineData = {
   corridors,
-  blocks: currentBlocks,
+  blocks: mockBlocks,
   trainSlots: mockTrainSlots,
   weekStart: weekStart.toISOString(),
   weekEnd: new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
@@ -220,54 +168,193 @@ export const mockSolveResult = (defect: InjectionDefect): SolveResult => ({
   status: 'solved-moved',
   timeMs: 856,
   blocksMoved: ['B-012', 'B-045', 'B-078'],
-  blocksAdded: [`B-${String(currentBlocks.length + 1).padStart(3, '0')}`],
+  blocksAdded: [`B-${String(mockBlocks.length + 1).padStart(3, '0')}`],
   blocksUnchanged: ['B-001', 'B-003', 'B-005', 'B-007', 'B-009', 'B-011', 'B-013', 'B-015'],
   explanation: `Emergency ${defect.department} defect injected. Re-solved with 2 blocks moved to accommodate the new priority task.`,
   confidence: 94,
 });
 
-// Mutation functions
-export const getCurrentDefects = () => currentDefects;
-export const getCurrentBlocks = () => currentBlocks;
+// ============================================
+// GETTER FUNCTIONS
+// ============================================
+export const getCurrentDefects = (): Defect[] => mockDefects;
+export const getCurrentBlocks = (): ScheduleBlock[] => mockBlocks;
 
+// ============================================
+// UPDATE FUNCTIONS
+// ============================================
 export const updateMockDefects = (newDefects: Defect[]) => {
-  currentDefects = newDefects;
-  currentBlocks = generateBlocks(currentDefects);
+  mockDefects = newDefects;
+  mockBlocks = generateBlocks(mockDefects);
 };
 
 export const updateMockBlocks = (newBlocks: ScheduleBlock[]) => {
-  currentBlocks = newBlocks;
+  mockBlocks = newBlocks;
 };
 
+// ============================================
+// DEFECT MUTATION FUNCTIONS
+// ============================================
 export const deleteMockDefect = (id: string): boolean => {
-  const index = currentDefects.findIndex(d => d.id === id);
-  if (index !== -1) {
-    currentDefects.splice(index, 1);
-    currentBlocks = generateBlocks(currentDefects);
-    return true;
-  }
-  return false;
+  const index = mockDefects.findIndex(d => d.id === id);
+  if (index === -1) return false;
+  mockDefects.splice(index, 1);
+  mockBlocks = generateBlocks(mockDefects);
+  return true;
 };
 
-export const scheduleMockDefect = (id: string): Defect | null => {
-  const defect = currentDefects.find(d => d.id === id);
-  if (defect && defect.status !== 'scheduled') {
-    defect.status = 'scheduled';
-    defect.score = calculateDefectScore(defect); // Update score
-    currentBlocks = generateBlocks(currentDefects);
-    return defect;
-  }
-  return null;
+export const scheduleMockDefect = (id: string, weekStart?: string): Defect | null => {
+  const defect = mockDefects.find(d => d.id === id);
+  if (!defect || defect.status === 'scheduled' || defect.status === 'approved') return null;
+
+  const updatedDefect = {
+    ...defect,
+    status: 'scheduled' as const,
+    scheduledWeek: weekStart || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  const index = mockDefects.findIndex(d => d.id === id);
+  mockDefects[index] = updatedDefect;
+
+  const startTime = new Date();
+  startTime.setHours(8 + (mockBlocks.length % 8), 0, 0, 0);
+  const endTime = new Date(startTime);
+  endTime.setHours(startTime.getHours() + 2 + Math.floor(Math.random() * 4));
+
+  const newBlock: ScheduleBlock = {
+    id: `B-${String(mockBlocks.length + 1).padStart(3, '0')}`,
+    defectId: id,
+    weekStart: weekStart || new Date().toISOString(),
+    status: 'proposed',
+    description: defect.description,
+    duration: Math.floor(Math.random() * 4) + 2,
+    priority: defect.tier === 'safety-critical' ? 1 : defect.tier === 'high' ? 2 : 3,
+    isCombined: false,
+    assignedTo: defect.department,
+    updatedAt: new Date().toISOString(),
+    corridor: defect.corridor || 'A-12',
+    department: defect.department,
+    startTime: startTime.toISOString(),
+    endTime: endTime.toISOString(),
+    defects: [defect],
+    savings: 0,
+  };
+  mockBlocks.push(newBlock);
+
+  return updatedDefect;
 };
 
-export const deferMockDefect = (id: string): Defect | null => {
-  const defect = currentDefects.find(d => d.id === id);
-  if (defect && defect.status !== 'deferred') {
-    defect.status = 'deferred';
-    defect.tier = 'deferred';
-    defect.score = calculateDefectScore(defect); // Update score
-    currentBlocks = generateBlocks(currentDefects);
-    return defect;
+export const deferMockDefect = (id: string, reason?: string): Defect | null => {
+  const defect = mockDefects.find(d => d.id === id);
+  if (!defect || defect.status === 'deferred') return null;
+
+  const updatedDefect = {
+    ...defect,
+    status: 'deferred' as const,
+    tier: 'deferred' as const,
+    deferReason: reason || 'Deferred by user',
+    updatedAt: new Date().toISOString(),
+  };
+
+  const index = mockDefects.findIndex(d => d.id === id);
+  mockDefects[index] = updatedDefect;
+  mockBlocks = mockBlocks.filter(b => b.defectId !== id);
+
+  return updatedDefect;
+};
+
+export const editMockDefect = (id: string, data: Partial<Defect>): Defect => {
+  const index = mockDefects.findIndex(d => d.id === id);
+  if (index === -1) throw new Error('Defect not found');
+
+  const updatedDefect = {
+    ...mockDefects[index],
+    ...data,
+    updatedAt: new Date().toISOString(),
+  };
+  mockDefects[index] = updatedDefect;
+  mockBlocks = generateBlocks(mockDefects);
+  return updatedDefect;
+};
+
+// ============================================
+// BLOCK MUTATION FUNCTIONS
+// ============================================
+export const approveMockBlock = (id: string): ScheduleBlock | null => {
+  const index = mockBlocks.findIndex(b => b.id === id);
+  if (index === -1) return null;
+  
+  mockBlocks[index] = {
+    ...mockBlocks[index],
+    status: 'approved',
+    updatedAt: new Date().toISOString(),
+  };
+  return mockBlocks[index];
+};
+
+export const lockMockBlock = (id: string): ScheduleBlock | null => {
+  const index = mockBlocks.findIndex(b => b.id === id);
+  if (index === -1) return null;
+  
+  mockBlocks[index] = {
+    ...mockBlocks[index],
+    status: 'locked',
+    updatedAt: new Date().toISOString(),
+  };
+  return mockBlocks[index];
+};
+
+export const deleteMockBlock = (id: string): boolean => {
+  const index = mockBlocks.findIndex(b => b.id === id);
+  if (index === -1) return false;
+  mockBlocks.splice(index, 1);
+  return true;
+};
+
+export const editMockBlock = (id: string, data: Partial<ScheduleBlock>): ScheduleBlock => {
+  const index = mockBlocks.findIndex(b => b.id === id);
+  if (index === -1) throw new Error('Block not found');
+
+  const updatedBlock = {
+    ...mockBlocks[index],
+    ...data,
+    updatedAt: new Date().toISOString(),
+  };
+  mockBlocks[index] = updatedBlock;
+  return updatedBlock;
+};
+
+// ============================================
+// FILTER FUNCTION
+// ============================================
+export const filterDefects = (defects: Defect[], params?: FilterParams): Defect[] => {
+  if (!defects || !Array.isArray(defects)) return [];
+  
+  let filtered = [...defects];
+  
+  if (params?.department) {
+    filtered = filtered.filter(d => d.department === params.department);
   }
-  return null;
+  if (params?.corridor) {
+    filtered = filtered.filter(d => d.corridor === params.corridor);
+  }
+  if (params?.tier) {
+    filtered = filtered.filter(d => d.tier === params.tier);
+  }
+  if (params?.status) {
+    filtered = filtered.filter(d => d.status === params.status);
+  }
+  if (params?.search && params.search.trim() !== '') {
+    const searchTerm = params.search.toLowerCase().trim();
+    filtered = filtered.filter(d =>
+      d.id?.toLowerCase().includes(searchTerm) ||
+      d.description?.toLowerCase().includes(searchTerm) ||
+      d.department?.toLowerCase().includes(searchTerm) ||
+      d.corridor?.toLowerCase().includes(searchTerm) ||
+      d.tier?.toLowerCase().includes(searchTerm)
+    );
+  }
+  
+  return filtered;
 };

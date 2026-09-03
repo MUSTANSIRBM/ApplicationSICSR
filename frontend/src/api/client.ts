@@ -1,3 +1,4 @@
+// src/api/client.ts
 import { 
   Defect, FilterParams, TimelineData, ImpactData, SystemStatus, 
   InjectionDefect, SolveResult, ScheduleBlock 
@@ -12,6 +13,12 @@ import {
   deleteMockDefect,
   scheduleMockDefect,
   deferMockDefect,
+  editMockDefect,
+  deleteMockBlock,
+  editMockBlock,
+  approveMockBlock,
+  lockMockBlock,
+  filterDefects,
 } from './mockData';
 
 const USE_MOCK = true;
@@ -23,42 +30,15 @@ export const api = {
   async getDefects(params?: FilterParams): Promise<Defect[]> {
     if (USE_MOCK) {
       await delay(300);
-      let data = [...getCurrentDefects()];
-      
-      // Apply department filter
-      if (params?.department) {
-        data = data.filter(d => d.department === params.department);
-      }
-      
-      // Apply corridor filter
-      if (params?.corridor) {
-        data = data.filter(d => d.corridor === params.corridor);
-      }
-      
-      // Apply tier filter
-      if (params?.tier) {
-        data = data.filter(d => d.tier === params.tier);
-      }
-      
-      // Apply search filter - search across multiple fields
-      if (params?.search && params.search.trim() !== '') {
-        const searchTerm = params.search.toLowerCase().trim();
-        data = data.filter(d => 
-          d.id.toLowerCase().includes(searchTerm) ||
-          d.description.toLowerCase().includes(searchTerm) ||
-          d.department.toLowerCase().includes(searchTerm) ||
-          d.corridor.toLowerCase().includes(searchTerm)
-        );
-      }
-      
-      return data;
+      const defects = getCurrentDefects();
+      return filterDefects(defects, params);
     }
     const qs = new URLSearchParams(params as any);
     const res = await fetch(`${API_BASE}/defects?${qs}`);
-    return res.json();
+    const data = await res.json();
+    return data || [];
   },
 
-  // ... rest of the methods remain the same ...
   async getDefect(id: string): Promise<Defect> {
     if (USE_MOCK) {
       await delay(200);
@@ -79,43 +59,65 @@ export const api = {
     return res.ok;
   },
 
-  async scheduleDefect(id: string): Promise<Defect | null> {
+  async scheduleDefect(id: string, weekStart?: string): Promise<Defect | null> {
     if (USE_MOCK) {
       await delay(400);
-      return scheduleMockDefect(id);
+      return scheduleMockDefect(id, weekStart);
     }
-    const res = await fetch(`${API_BASE}/defects/${id}/schedule`, { method: 'POST' });
+    const url = weekStart 
+      ? `${API_BASE}/defects/${id}/schedule?week_start=${weekStart}`
+      : `${API_BASE}/defects/${id}/schedule`;
+    const res = await fetch(url, { method: 'POST' });
     return res.json();
   },
 
-  async deferDefect(id: string): Promise<Defect | null> {
+  async deferDefect(id: string, reason?: string): Promise<Defect | null> {
     if (USE_MOCK) {
       await delay(400);
-      return deferMockDefect(id);
+      return deferMockDefect(id, reason);
     }
-    const res = await fetch(`${API_BASE}/defects/${id}/defer`, { method: 'POST' });
+    const res = await fetch(`${API_BASE}/defects/${id}/defer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
+    });
+    return res.json();
+  },
+
+  async editDefect(id: string, data: Partial<Defect>): Promise<Defect> {
+    if (USE_MOCK) {
+      await delay(300);
+      return editMockDefect(id, data);
+    }
+    const res = await fetch(`${API_BASE}/defects/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
     return res.json();
   },
 
   async getSchedule(week: string): Promise<TimelineData> {
     if (USE_MOCK) {
       await delay(400);
+      const blocks = getCurrentBlocks();
       return { 
         ...mockTimelineData, 
-        blocks: getCurrentBlocks(),
+        blocks: blocks || [],
         weekStart: week,
       };
     }
     const res = await fetch(`${API_BASE}/schedule?week=${week}`);
-    return res.json();
+    const data = await res.json();
+    return data || { blocks: [], weekStart: week, weekEnd: '', trainSlots: [], corridors: [] };
   },
 
   async approveBlock(id: string): Promise<ScheduleBlock> {
     if (USE_MOCK) {
       await delay(300);
-      const block = getCurrentBlocks().find(b => b.id === id);
-      if (!block) throw new Error('Block not found');
-      return { ...block, status: 'approved' };
+      const updated = approveMockBlock(id);
+      if (!updated) throw new Error('Block not found');
+      return updated;
     }
     const res = await fetch(`${API_BASE}/blocks/${id}/approve`, { method: 'POST' });
     return res.json();
@@ -124,11 +126,33 @@ export const api = {
   async lockBlock(id: string): Promise<ScheduleBlock> {
     if (USE_MOCK) {
       await delay(300);
-      const block = getCurrentBlocks().find(b => b.id === id);
-      if (!block) throw new Error('Block not found');
-      return { ...block, status: 'locked' };
+      const updated = lockMockBlock(id);
+      if (!updated) throw new Error('Block not found');
+      return updated;
     }
     const res = await fetch(`${API_BASE}/blocks/${id}/lock`, { method: 'POST' });
+    return res.json();
+  },
+
+  async deleteBlock(id: string): Promise<boolean> {
+    if (USE_MOCK) {
+      await delay(300);
+      return deleteMockBlock(id);
+    }
+    const res = await fetch(`${API_BASE}/blocks/${id}`, { method: 'DELETE' });
+    return res.ok;
+  },
+
+  async editBlock(id: string, data: Partial<ScheduleBlock>): Promise<ScheduleBlock> {
+    if (USE_MOCK) {
+      await delay(300);
+      return editMockBlock(id, data);
+    }
+    const res = await fetch(`${API_BASE}/blocks/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
     return res.json();
   },
 
@@ -172,7 +196,8 @@ export const api = {
       return { ...mockImpactData };
     }
     const res = await fetch(`${API_BASE}/impact?week=${week}`);
-    return res.json();
+    const data = await res.json();
+    return data || mockImpactData;
   },
 
   async getStatus(): Promise<SystemStatus> {
@@ -181,6 +206,7 @@ export const api = {
       return { ...mockSystemStatus };
     }
     const res = await fetch(`${API_BASE}/status`);
-    return res.json();
+    const data = await res.json();
+    return data || mockSystemStatus;
   },
 };

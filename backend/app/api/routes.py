@@ -4,17 +4,25 @@ from typing import List, Optional
 from datetime import datetime, date, timedelta
 from uuid import UUID
 from sqlmodel import Session
-from app.data.crud import CRUD
 from app.data.database import get_session
 from app.core.models import (
     Defect, Corridor, Block, SolveRequest, SolveResponse,
-    ScoreResponse, ImpactMetrics
+    ScoreResponse, ImpactMetrics, Department, DefectStatus
 )
+from app.core.incident_models import IncidentRequest, IncidentResponse
+from app.core.decision_engine import decision_engine
+from app.data.crud import CRUD
+import uuid
+import logging
+
 from app.core.scoring import ScoringEngine
 from app.core.optimizer import Optimizer
 from app.adapters import (
     MockTMSAdapter, MockSMMSAdapter, MockTDMSAdapter, MockCOAAdapter
 )
+
+# Setup logger
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 scoring_engine = ScoringEngine()
@@ -70,9 +78,9 @@ async def get_reference():
 
 @router.get("/defects", response_model=List[Defect])
 async def get_defects(
-        department: Optional[str] = None,
-        status: Optional[str] = None,
-        session: Session = Depends(get_db)
+    department: Optional[str] = None,
+    status: Optional[str] = None,
+    session: Session = Depends(get_db)
 ):
     """Get all defects with optional filtering."""
     crud = CRUD(session)
@@ -88,8 +96,8 @@ async def get_defects(
 
 @router.get("/defects/{defect_id}/score", response_model=ScoreResponse)
 async def get_defect_score(
-        defect_id: UUID,
-        session: Session = Depends(get_db)
+    defect_id: UUID,
+    session: Session = Depends(get_db)
 ):
     """Get detailed score breakdown for a defect."""
     crud = CRUD(session)
@@ -102,8 +110,8 @@ async def get_defect_score(
 
 @router.get("/defects/{defect_id}/deferrals")
 async def get_defect_deferrals(
-        defect_id: UUID,
-        session: Session = Depends(get_db)
+    defect_id: UUID,
+    session: Session = Depends(get_db)
 ):
     """Get deferral reasons for a defect."""
     crud = CRUD(session)
@@ -111,7 +119,6 @@ async def get_defect_deferrals(
     if not defect:
         raise HTTPException(status_code=404, detail="Defect not found")
 
-    # Return deferral reasons from the defect's data
     return {
         "reasons": [
             {
@@ -126,13 +133,12 @@ async def get_defect_deferrals(
 
 @router.post("/defects/score-all", response_model=List[ScoreResponse])
 async def score_all_defects(
-        session: Session = Depends(get_db)
+    session: Session = Depends(get_db)
 ):
     """Score all active defects."""
     crud = CRUD(session)
     defects = crud.get_all_defects()
 
-    # Filter to only NEW and SCORED defects
     active_defects = [
         d for d in defects
         if str(d.status).upper() in ["NEW", "SCORED"]
@@ -143,26 +149,23 @@ async def score_all_defects(
 
 @router.post("/defects")
 async def create_defect(
-        defect: Defect,
-        session: Session = Depends(get_db)
+    defect: Defect,
+    session: Session = Depends(get_db)
 ):
     """Inject a new defect (for live demo)."""
     crud = CRUD(session)
 
-    # Score the defect
     scored = scoring_engine.score_defect(defect, date.today())
     defect.score = scored.score
 
-    # Save to database
     created = crud.create_defect(defect)
     return created
 
 
-# Keep old inject endpoint for backward compatibility
 @router.post("/defects/inject", response_model=Defect)
 async def inject_defect(
-        defect: Defect,
-        session: Session = Depends(get_db)
+    defect: Defect,
+    session: Session = Depends(get_db)
 ):
     """Inject a new defect (legacy endpoint)."""
     return await create_defect(defect, session)
@@ -185,32 +188,27 @@ async def get_corridors(session: Session = Depends(get_db)):
 
 @router.post("/solve", response_model=SolveResponse)
 async def solve_schedule(
-        horizon_days: int = Query(7, ge=1, le=30),
-        use_greedy: bool = False,
-        preserve_approved: bool = True,
-        session: Session = Depends(get_db)
+    horizon_days: int = Query(7, ge=1, le=30),
+    use_greedy: bool = False,
+    preserve_approved: bool = True,
+    session: Session = Depends(get_db)
 ):
     """Generate optimized schedule."""
     crud = CRUD(session)
 
-    # Get all data
     defects = crud.get_all_defects()
     corridors = crud.get_all_corridors()
 
-    # Get timetable and forecast data
     timetable = coa_adapter.get_timetable()
     goods_forecast = coa_adapter.get_goods_forecast()
 
-    # Get approved blocks
     all_blocks = crud.get_blocks(
         datetime.now(),
         datetime.now() + timedelta(days=horizon_days)
     )
 
-    # Filter approved blocks
     approved_blocks = [b for b in all_blocks if str(b.status).upper() == "APPROVED"]
 
-    # Create solve request
     request = SolveRequest(
         defects=defects,
         corridors=corridors,
@@ -223,10 +221,8 @@ async def solve_schedule(
         approved_blocks=approved_blocks
     )
 
-    # Run optimizer
     response = optimizer.solve(request)
 
-    # Save blocks to database
     for block in response.blocks:
         crud.create_block(block)
 
@@ -235,25 +231,21 @@ async def solve_schedule(
 
 @router.get("/plan")
 async def get_plan(
-        solve_id: Optional[UUID] = None,
-        session: Session = Depends(get_db)
+    solve_id: Optional[UUID] = None,
+    session: Session = Depends(get_db)
 ):
     """Get the plan (timeline data)."""
     crud = CRUD(session)
 
-    # Get blocks
     if solve_id:
-        # Try to get specific solve's blocks - if method doesn't exist, get all
         try:
             blocks = crud.get_blocks_by_solve(solve_id)
         except AttributeError:
-            # Fallback: get all blocks
             blocks = crud.get_blocks(
                 datetime.now(),
                 datetime.now() + timedelta(days=28)
             )
     else:
-        # Get latest blocks
         blocks = crud.get_blocks(
             datetime.now(),
             datetime.now() + timedelta(days=28)
@@ -282,7 +274,7 @@ async def get_plan(
             for block in blocks
         ],
         "occupancy": {
-            "trains": [],  # Train data can be added here
+            "trains": [],
             "goods": []
         }
     }
@@ -293,12 +285,10 @@ async def get_solves(session: Session = Depends(get_db)):
     """Get solve history."""
     crud = CRUD(session)
 
-    # Try to get solves, fallback to returning blocks
     try:
         solves = crud.get_all_solves()
         return solves
     except AttributeError:
-        # Fallback: return blocks grouped by solve_id
         blocks = crud.get_blocks(
             datetime.now() - timedelta(days=30),
             datetime.now()
@@ -322,29 +312,25 @@ async def get_solves(session: Session = Depends(get_db)):
 
 @router.get("/impact", response_model=ImpactMetrics)
 async def get_impact_metrics(
-        session: Session = Depends(get_db)
+    session: Session = Depends(get_db)
 ):
     """Get impact metrics comparing baseline vs optimized."""
     crud = CRUD(session)
 
-    # Get all blocks from last 7 days
     start_date = datetime.now() - timedelta(days=7)
     end_date = datetime.now()
     blocks = crud.get_blocks(start_date, end_date)
 
-    # Calculate metrics
     total_blocks = len(blocks)
     total_hours = sum(b.duration_hours for b in blocks)
     combined_blocks = sum(1 for b in blocks if b.is_combined)
 
-    # Simulate baseline (how it's done today)
     baseline_blocks = int(total_blocks * 1.5) if total_blocks > 0 else 10
     baseline_hours = total_hours * 1.4 if total_hours > 0 else 20
 
     hours_saved = baseline_hours - total_hours
     percent_improvement = (hours_saved / baseline_hours * 100) if baseline_hours > 0 else 0
 
-    # Count safety critical handled
     safety_critical_handled = 0
     for block in blocks:
         for defect_id in block.defect_ids:
@@ -376,15 +362,12 @@ async def sync_from_adapters(session: Session = Depends(get_db)):
     """Sync data from all mock adapters."""
     crud = CRUD(session)
 
-    # Get data from each adapter
     tms_defects = tms_adapter.get_defects()
     smms_defects = smms_adapter.get_defects()
     tdms_defects = tdms_adapter.get_defects()
 
-    # Save to database
     all_defects = tms_defects + smms_defects + tdms_defects
     for defect in all_defects:
-        # Check if exists
         existing = crud.get_defect(defect.id)
         if not existing:
             crud.create_defect(defect)
@@ -405,66 +388,134 @@ async def sync_from_adapters(session: Session = Depends(get_db)):
 
 @router.get("/v1/defects", response_model=List[Defect])
 async def v1_get_defects(
-        department: Optional[str] = None,
-        status: Optional[str] = None,
-        session: Session = Depends(get_db)
+    department: Optional[str] = None,
+    status: Optional[str] = None,
+    session: Session = Depends(get_db)
 ):
-    """Legacy v1 endpoint - Get all defects with optional filtering."""
     return await get_defects(department, status, session)
 
 
 @router.get("/v1/defects/{defect_id}/score", response_model=ScoreResponse)
 async def v1_get_defect_score(
-        defect_id: UUID,
-        session: Session = Depends(get_db)
+    defect_id: UUID,
+    session: Session = Depends(get_db)
 ):
-    """Legacy v1 endpoint - Get detailed score breakdown for a defect."""
     return await get_defect_score(defect_id, session)
 
 
 @router.post("/v1/defects/score-all", response_model=List[ScoreResponse])
 async def v1_score_all_defects(
-        session: Session = Depends(get_db)
+    session: Session = Depends(get_db)
 ):
-    """Legacy v1 endpoint - Score all active defects."""
     return await score_all_defects(session)
 
 
 @router.get("/v1/corridors", response_model=List[Corridor])
 async def v1_get_corridors(session: Session = Depends(get_db)):
-    """Legacy v1 endpoint - Get all corridors."""
     return await get_corridors(session)
 
 
 @router.post("/v1/solve", response_model=SolveResponse)
 async def v1_solve_schedule(
-        horizon_days: int = Query(7, ge=1, le=30),
-        use_greedy: bool = False,
-        preserve_approved: bool = True,
-        session: Session = Depends(get_db)
+    horizon_days: int = Query(7, ge=1, le=30),
+    use_greedy: bool = False,
+    preserve_approved: bool = True,
+    session: Session = Depends(get_db)
 ):
-    """Legacy v1 endpoint - Generate optimized schedule."""
     return await solve_schedule(horizon_days, use_greedy, preserve_approved, session)
 
 
 @router.post("/v1/defects/inject", response_model=Defect)
 async def v1_inject_defect(
-        defect: Defect,
-        session: Session = Depends(get_db)
+    defect: Defect,
+    session: Session = Depends(get_db)
 ):
-    """Legacy v1 endpoint - Inject a new defect."""
     return await create_defect(defect, session)
 
 
 @router.get("/v1/impact", response_model=ImpactMetrics)
 async def v1_get_impact_metrics(
-        session: Session = Depends(get_db)
+    session: Session = Depends(get_db)
 ):
-    """Legacy v1 endpoint - Get impact metrics."""
     return await get_impact_metrics(session)
 
 
 @router.get("/v1/adapters/sync")
 async def v1_sync_from_adapters(session: Session = Depends(get_db)):
-    """Legacy v1 endpoint - Sync data from all mock adapters."""
     return await sync_from_adapters(session)
+
+
+# ============================================================
+# SENSOR-DECISION MODULE (Brain 1) - INCIDENT ENDPOINT
+# ============================================================
+
+@router.post("/incident", response_model=IncidentResponse)
+async def handle_incident(
+    request: IncidentRequest,
+    session: Session = Depends(get_db)
+):
+    """
+    Handle real-time sensor incident.
+
+    This is Brain 1 - Sensor-Decision Module.
+    Takes 16 sensor inputs, calculates physics, applies hard rules,
+    runs ML inference, and optionally bridges to the block planner.
+
+    **Input:** 16 sensor features (speed, distance, weather, severity, etc.)
+    **Output:** Decision (action, confidence, source, reasons) + Physics calculations
+
+    **Bridge to Brain 2:** If `create_repair_defect=True`, creates a safety-critical
+    defect in the block planner with score 100.0.
+    """
+    try:
+        # 1. Run decision engine (physics + hard rules + ML)
+        response = decision_engine.evaluate(request)
+
+        # 2. Bridge to Block Planner (Brain 2) if requested
+        if request.create_repair_defect:
+            crud = CRUD(session)
+
+            # Map severity: 1-10 incident severity → 1-5 planner severity
+            mapped_severity = min(5, 1 + request.severity_score // 2)
+
+            # Determine department based on obstruction type
+            dept_mapping = {
+                "landslide_debris": Department.TRACK,
+                "boulder": Department.TRACK,
+                "track_buckling": Department.TRACK,
+                "fallen_tree": Department.TRACK,
+                "stranded_vehicle": Department.TRACK,
+                "water_logging": Department.TRACK,
+                "cattle_crossing": Department.TRACK,
+            }
+            department = dept_mapping.get(request.obstruction_type, Department.TRACK)
+
+            # Create defect description
+            desc = f"Sensor incident: {request.obstruction_type.replace('_', ' ').title()} at {request.distance_to_obstacle_km}km"
+
+            # Create new defect
+            new_defect = Defect(
+                id=uuid.uuid4(),
+                defect_id=f"INC-{uuid.uuid4().hex[:6].upper()}",
+                description=desc,
+                department=department,
+                severity=mapped_severity,
+                overdue_days=0,
+                traffic_impact=5 if request.severity_score >= 8 else 3,
+                safety_critical=True,
+                corridor_id=request.corridor,
+                system_source="SENSOR_ML",
+                status=DefectStatus.NEW,
+                score=100.0
+            )
+
+            created_defect = crud.create_defect(new_defect)
+            response.repair_defect_id = str(created_defect.id)
+
+            logger.info(f"🔗 Bridged incident to repair defect: {created_defect.id}")
+
+        return response
+
+    except Exception as e:
+        logger.error(f"❌ Incident handling failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

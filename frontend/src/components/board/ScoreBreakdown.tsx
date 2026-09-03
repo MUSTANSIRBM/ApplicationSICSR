@@ -1,5 +1,4 @@
 import { Defect } from '@/types';
-import { calculateDefectScore } from '@/api/mockData';
 
 interface ScoreBreakdownProps {
   defect: Defect;
@@ -27,8 +26,7 @@ export function ScoreBreakdown({ defect }: ScoreBreakdownProps) {
   const trafficContrib = trafficValue * trafficWeight;
   const total = severityContrib + overdueContrib + trafficContrib;
 
-  // Calculate score using the same function for consistency
-  const calculatedScore = calculateDefectScore(defect);
+  const calculatedScore = total;
 
   const getColorForValue = (value: number) => {
     if (value >= 80) return '#EF4444';

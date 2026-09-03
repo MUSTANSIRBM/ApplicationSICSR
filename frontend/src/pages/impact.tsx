@@ -1,10 +1,12 @@
+// src/pages/impact.tsx
 import { useEffect } from 'react';
 import { MetricCard } from '@/components/impact/MetricCard';
 import { SavingsChart } from '@/components/impact/SavingsChart';
 import { useStore } from '@/store/useStore';
+import { withAuth } from '@/hoc/withAuth';
 import toast from 'react-hot-toast';
 
-export default function ImpactPage() {
+function ImpactPage() {
   const { impactData, selectedWeek, loadImpact } = useStore();
 
   useEffect(() => {
@@ -130,3 +132,5 @@ export default function ImpactPage() {
     </div>
   );
 }
+
+export default withAuth(ImpactPage);

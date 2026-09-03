@@ -1,164 +1,220 @@
+// src/components/live/BeforeAfterView.tsx
 import { useState, useMemo } from 'react';
-import { clsx } from 'clsx';
-import { ScheduleBlock, SolveResult } from '@/types';
-import { Button } from '@/components/ui/Button';
+import { ScheduleBlock } from '@/types';
+import { Badge } from '@/components/ui/Badge';
+import { ArrowRight, CheckCircle, XCircle } from 'lucide-react';
 
 interface BeforeAfterViewProps {
-  beforeBlocks: ScheduleBlock[];
-  afterBlocks: ScheduleBlock[];
-  result: SolveResult | null;
-  onAccept?: () => void;
-  onReject?: () => void;
+  beforeBlocks?: ScheduleBlock[];
+  afterBlocks?: ScheduleBlock[];
+  corridors?: string[];
+  loading?: boolean;
 }
 
-export function BeforeAfterView({ beforeBlocks, afterBlocks, result, onAccept, onReject }: BeforeAfterViewProps) {
-  const [view, setView] = useState<'before' | 'after' | 'diff'>('after');
+export function BeforeAfterView({ 
+  beforeBlocks = [], 
+  afterBlocks = [], 
+  corridors = [],
+  loading = false 
+}: BeforeAfterViewProps) {
+  const [view, setView] = useState<'before' | 'after' | 'combined'>('combined');
+  const [selectedCorridor, setSelectedCorridor] = useState<string>('all');
 
-  const diffData = useMemo(() => {
-    if (!result) return { blocksAdded: [], blocksRemoved: [], blocksUnchanged: [] };
-    
-    const beforeIds = new Set(beforeBlocks.map(b => b.id));
-    const afterIds = new Set(afterBlocks.map(b => b.id));
-    
-    const blocksAdded = afterBlocks.filter(b => !beforeIds.has(b.id)).map(b => b.id);
-    const blocksRemoved = beforeBlocks.filter(b => !afterIds.has(b.id)).map(b => b.id);
-    const blocksUnchanged = beforeBlocks.filter(b => afterIds.has(b.id)).map(b => b.id);
-    
-    return { blocksAdded, blocksRemoved, blocksUnchanged };
-  }, [beforeBlocks, afterBlocks, result]);
+  // Ensure we're working with arrays
+  const safeBeforeBlocks = Array.isArray(beforeBlocks) ? beforeBlocks : [];
+  const safeAfterBlocks = Array.isArray(afterBlocks) ? afterBlocks : [];
+  const safeCorridors = Array.isArray(corridors) ? corridors : [];
 
-  const getBlockStyle = (block: ScheduleBlock, isAfter: boolean) => {
-    if (view === 'diff') {
-      if (diffData.blocksAdded.includes(block.id) && isAfter) {
-        return 'bg-green-100 border-green-500 ring-2 ring-green-300';
+  // Get unique corridors from data if not provided
+  const allCorridors = useMemo(() => {
+    if (safeCorridors.length > 0) return safeCorridors;
+    
+    const corridorSet = new Set<string>();
+    [...safeBeforeBlocks, ...safeAfterBlocks].forEach(block => {
+      if (block?.corridor) {
+        corridorSet.add(block.corridor);
       }
-      if (diffData.blocksRemoved.includes(block.id) && !isAfter) {
-        return 'bg-red-100 border-red-500 opacity-50 line-through';
-      }
-      if (diffData.blocksUnchanged.includes(block.id)) {
-        return 'bg-blue-50 border-blue-300';
-      }
+    });
+    return Array.from(corridorSet);
+  }, [safeBeforeBlocks, safeAfterBlocks, safeCorridors]);
+
+  const getDisplayBlocks = (blocks: ScheduleBlock[], corridor?: string) => {
+    // Guard against undefined or null blocks
+    if (!blocks || !Array.isArray(blocks)) {
+      return [];
     }
-    return 'bg-white border-gray-200';
+    
+    if (corridor && corridor !== 'all') {
+      return blocks.filter(b => b.corridor === corridor);
+    }
+    return blocks;
   };
 
-  const getDisplayBlocks = (corridor: string) => {
+  const getBlocks = () => {
     if (view === 'before') {
-      return beforeBlocks.filter(b => b.corridor === corridor);
+      return getDisplayBlocks(safeBeforeBlocks, selectedCorridor);
     } else if (view === 'after') {
-      return afterBlocks.filter(b => b.corridor === corridor);
+      return getDisplayBlocks(safeAfterBlocks, selectedCorridor);
     } else {
-      return afterBlocks.filter(b => b.corridor === corridor);
+      // Combined view - show both with a visual indicator
+      const before = getDisplayBlocks(safeBeforeBlocks, selectedCorridor);
+      const after = getDisplayBlocks(safeAfterBlocks, selectedCorridor);
+      
+      // Merge and deduplicate by ID
+      const merged = [...before];
+      after.forEach(aBlock => {
+        if (!merged.find(b => b.id === aBlock.id)) {
+          merged.push(aBlock);
+        }
+      });
+      return merged;
     }
   };
 
-  const corridors = ['A', 'B', 'C', 'D', 'E'];
+  const getBlockStatus = (blockId: string) => {
+    const inBefore = safeBeforeBlocks.some(b => b.id === blockId);
+    const inAfter = safeAfterBlocks.some(b => b.id === blockId);
+    
+    if (inBefore && inAfter) return 'unchanged';
+    if (inBefore && !inAfter) return 'removed';
+    if (!inBefore && inAfter) return 'added';
+    return 'unknown';
+  };
+
+  const displayBlocks = getBlocks();
+  const totalBefore = safeBeforeBlocks.length;
+  const totalAfter = safeAfterBlocks.length;
+  const addedCount = safeAfterBlocks.filter(b => !safeBeforeBlocks.some(before => before.id === b.id)).length;
+  const removedCount = safeBeforeBlocks.filter(b => !safeAfterBlocks.some(after => after.id === b.id)).length;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="spinner h-8 w-8" />
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <div className="flex items-center gap-2 mb-3">
-        <div className="flex rounded-md overflow-hidden border border-gray-200">
-          {(['before', 'after', 'diff'] as const).map(mode => (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Schedule Comparison</h3>
+          <p className="text-sm text-gray-500">
+            Before: {totalBefore} blocks · After: {totalAfter} blocks
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1 bg-gray-100 rounded-md p-1">
             <button
-              key={mode}
-              onClick={() => setView(mode)}
-              className={clsx(
-                'px-3 py-1 text-sm capitalize transition-colors',
-                view === mode ? 'bg-blue-100 text-blue-700' : 'bg-white text-gray-600 hover:bg-gray-50'
-              )}
+              onClick={() => setView('before')}
+              className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                view === 'before' 
+                  ? 'bg-white shadow-sm text-gray-800' 
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
             >
-              {mode}
+              Before
             </button>
-          ))}
-        </div>
-        {result && (
-          <div className="ml-auto flex items-center gap-2 text-sm">
-            <span className="text-gray-500">Solved in</span>
-            <span className="font-mono font-medium">{result.timeMs}ms</span>
-            <span className={clsx(
-              'px-2 py-0.5 rounded-full text-xs font-medium',
-              result.status === 'solved-optimal' ? 'bg-green-100 text-green-700' :
-              result.status === 'solved-moved' ? 'bg-yellow-100 text-yellow-700' :
-              'bg-red-100 text-red-700'
-            )}>
-              {result.status.replace('-', ' ')}
-            </span>
+            <button
+              onClick={() => setView('after')}
+              className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                view === 'after' 
+                  ? 'bg-white shadow-sm text-gray-800' 
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              After
+            </button>
+            <button
+              onClick={() => setView('combined')}
+              className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                view === 'combined' 
+                  ? 'bg-white shadow-sm text-gray-800' 
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Combined
+            </button>
           </div>
-        )}
+          
+          <select
+            value={selectedCorridor}
+            onChange={(e) => setSelectedCorridor(e.target.value)}
+            className="text-sm border rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Corridors</option>
+            {allCorridors.map(corridor => (
+              <option key={corridor} value={corridor}>{corridor}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      {view === 'diff' && result && (
-        <div className="mb-3 text-sm">
-          <div className="flex items-center gap-4 text-xs">
-            <span className="flex items-center gap-1">
-              <span className="w-3 h-3 bg-green-500 rounded" />
-              Added: {diffData.blocksAdded.length}
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-3 h-3 bg-red-500 rounded" />
-              Removed: {diffData.blocksRemoved.length}
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-3 h-3 bg-blue-500 rounded" />
-              Unchanged: {diffData.blocksUnchanged.length}
-            </span>
-          </div>
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="bg-blue-50 rounded-lg p-3 text-center">
+          <div className="text-2xl font-bold text-blue-600">{totalBefore}</div>
+          <div className="text-xs text-blue-700">Before</div>
         </div>
-      )}
-
-      <div className="border rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b border-gray-200">
-            <tr>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 w-20">Corridor</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-gray-500">Blocks</th>
-            </tr>
-          </thead>
-          <tbody>
-            {corridors.map(corridor => {
-              const blocks = getDisplayBlocks(corridor);
-              const isAfter = view === 'after' || view === 'diff';
-              
-              return (
-                <tr key={corridor} className="border-b border-gray-100 last:border-0">
-                  <td className="px-3 py-2 font-medium text-gray-700">{corridor}</td>
-                  <td className="px-3 py-2">
-                    <div className="flex flex-wrap gap-1.5">
-                      {blocks.length > 0 ? blocks.map(block => (
-                        <div
-                          key={block.id}
-                          className={clsx(
-                            'px-2 py-0.5 rounded text-xs border transition-all',
-                            getBlockStyle(block, isAfter)
-                          )}
-                          title={block.id}
-                        >
-                          {block.id}
-                          <span className="ml-1 text-gray-400">{block.defects.length}</span>
-                        </div>
-                      )) : (
-                        <span className="text-xs text-gray-400">—</span>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div className="bg-green-50 rounded-lg p-3 text-center">
+          <div className="text-2xl font-bold text-green-600">{totalAfter}</div>
+          <div className="text-xs text-green-700">After</div>
+        </div>
+        <div className="bg-purple-50 rounded-lg p-3 text-center">
+          <div className="text-2xl font-bold text-purple-600">
+            {addedCount > 0 ? `+${addedCount}` : '0'}
+            {removedCount > 0 && ` / -${removedCount}`}
+          </div>
+          <div className="text-xs text-purple-700">Added / Removed</div>
+        </div>
       </div>
 
-      {result && view !== 'before' && (
-        <div className="mt-3 flex items-center justify-between">
-          <div className="text-sm text-gray-600">
-            <span className="font-medium">{diffData.blocksUnchanged.length}</span> blocks unchanged,
-            <span className="font-medium text-red-600"> {diffData.blocksRemoved.length}</span> removed,
-            <span className="font-medium text-green-600"> {diffData.blocksAdded.length}</span> added
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={onAccept} variant="success" size="sm">Accept</Button>
-            <Button onClick={onReject} variant="secondary" size="sm">Reject</Button>
-          </div>
+      {/* Blocks Grid */}
+      {displayBlocks.length === 0 ? (
+        <div className="text-center py-12 text-gray-500">
+          <p className="text-lg font-medium">No blocks to display</p>
+          <p className="text-sm">Try selecting a different corridor or view</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {displayBlocks.map(block => {
+            const status = getBlockStatus(block.id);
+            const statusConfig = {
+              unchanged: { bg: 'bg-gray-50', border: 'border-gray-200', icon: null, label: 'Unchanged' },
+              added: { bg: 'bg-green-50', border: 'border-green-300', icon: <CheckCircle className="w-4 h-4 text-green-600" />, label: 'Added' },
+              removed: { bg: 'bg-red-50', border: 'border-red-300', icon: <XCircle className="w-4 h-4 text-red-600" />, label: 'Removed' },
+              unknown: { bg: 'bg-gray-50', border: 'border-gray-200', icon: null, label: 'Unknown' },
+            };
+            
+            const config = statusConfig[status] || statusConfig.unknown;
+
+            return (
+              <div 
+                key={block.id} 
+                className={`border rounded-lg p-3 ${config.bg} ${config.border} hover:shadow-md transition-shadow`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-medium text-gray-500">{block.id}</span>
+                  <span className="text-xs flex items-center gap-1">
+                    {config.icon}
+                    {config.label}
+                  </span>
+                </div>
+                <div className="text-sm font-medium text-gray-800 line-clamp-2">
+                  {block.description || 'No description'}
+                </div>
+                <div className="flex items-center justify-between text-xs text-gray-500 mt-2">
+                  <span>{block.duration || 0}h</span>
+                  <span>P{block.priority || 3}</span>
+                  <span>{block.assignedTo || 'Unassigned'}</span>
+                  <span>{block.corridor || 'N/A'}</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
