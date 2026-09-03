@@ -1,8 +1,11 @@
+// src/store/useStore.ts
 import { create } from 'zustand';
 import { Defect, ScheduleBlock, TimelineData, ImpactData, SystemStatus, FilterParams } from '@/types';
 import { api } from '@/api/client';
+import { mockDefects, mockBlocks, mockTimelineData, mockImpactData, mockSystemStatus } from '@/api/mockData';
 
 interface AppState {
+  // State
   defects: Defect[];
   blocks: ScheduleBlock[];
   timelineData: TimelineData | null;
@@ -13,13 +16,13 @@ interface AppState {
   filters: FilterParams;
   searchQuery: string;
   
+  // Actions
   loadDefects: (filters?: FilterParams) => Promise<void>;
   loadSchedule: (week: string) => Promise<void>;
   loadImpact: (week: string) => Promise<void>;
   loadStatus: () => Promise<void>;
   scheduleDefect: (id: string) => Promise<void>;
   deferDefect: (id: string, reason?: string) => Promise<void>;
-  deleteDefect: (id: string) => Promise<void>;
   approveBlock: (id: string) => Promise<void>;
   lockBlock: (id: string) => Promise<void>;
   injectDefect: (defect: any) => Promise<any>;
@@ -29,6 +32,7 @@ interface AppState {
   resetStore: () => void;
 }
 
+// Initial state for fresh load
 const initialState = {
   defects: [],
   blocks: [],
@@ -48,10 +52,6 @@ export const useStore = create<AppState>((set, get) => ({
     set({ loading: true });
     try {
       const currentFilters = filters || get().filters;
-      // Only include search if there's a search query
-      if (get().searchQuery && !currentFilters.search) {
-        currentFilters.search = get().searchQuery;
-      }
       const defects = await api.getDefects(currentFilters);
       set({ defects, loading: false });
     } catch (error) {
@@ -94,39 +94,36 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  deleteDefect: async (id: string) => {
-    set({ loading: true });
-    try {
-      await api.deleteDefect(id);
-      await get().loadDefects();
-      await get().loadSchedule(get().selectedWeek);
-      set({ loading: false });
-    } catch (error) {
-      set({ loading: false });
-      throw error;
-    }
-  },
-
   scheduleDefect: async (id: string) => {
     set({ loading: true });
     try {
-      await api.scheduleDefect(id);
-      await get().loadDefects();
+      const defect = await api.scoreDefect(id);
+      // Update defect in list
+      const updatedDefects = get().defects.map(d => 
+        d.id === id ? { ...d, status: 'scored', ...defect } : d
+      );
+      set({ defects: updatedDefects, loading: false });
+      
+      // Reload schedule to reflect changes
       await get().loadSchedule(get().selectedWeek);
-      set({ loading: false });
+      return defect;
     } catch (error) {
       set({ loading: false });
       throw error;
     }
   },
 
-  deferDefect: async (id: string) => {
+  deferDefect: async (id: string, reason?: string) => {
     set({ loading: true });
     try {
-      await api.deferDefect(id);
-      await get().loadDefects();
+      // In real app, call API to defer
+      const updatedDefects = get().defects.map(d => 
+        d.id === id ? { ...d, status: 'deferred', tier: 'deferred' } : d
+      );
+      set({ defects: updatedDefects, loading: false });
+      
+      // Reload schedule to reflect changes
       await get().loadSchedule(get().selectedWeek);
-      set({ loading: false });
     } catch (error) {
       set({ loading: false });
       throw error;
@@ -136,9 +133,14 @@ export const useStore = create<AppState>((set, get) => ({
   approveBlock: async (id: string) => {
     set({ loading: true });
     try {
-      await api.approveBlock(id);
+      const block = await api.approveBlock(id);
+      const updatedBlocks = get().blocks.map(b => 
+        b.id === id ? { ...b, status: 'approved' } : b
+      );
+      set({ blocks: updatedBlocks, loading: false });
+      
+      // Reload schedule
       await get().loadSchedule(get().selectedWeek);
-      set({ loading: false });
     } catch (error) {
       set({ loading: false });
       throw error;
@@ -148,9 +150,14 @@ export const useStore = create<AppState>((set, get) => ({
   lockBlock: async (id: string) => {
     set({ loading: true });
     try {
-      await api.lockBlock(id);
+      const block = await api.lockBlock(id);
+      const updatedBlocks = get().blocks.map(b => 
+        b.id === id ? { ...b, status: 'locked' } : b
+      );
+      set({ blocks: updatedBlocks, loading: false });
+      
+      // Reload schedule
       await get().loadSchedule(get().selectedWeek);
-      set({ loading: false });
     } catch (error) {
       set({ loading: false });
       throw error;
@@ -161,6 +168,7 @@ export const useStore = create<AppState>((set, get) => ({
     set({ loading: true });
     try {
       const result = await api.injectDefect(defect);
+      // Reload everything to reflect changes
       await get().loadSchedule(get().selectedWeek);
       await get().loadDefects();
       await get().loadImpact(get().selectedWeek);
@@ -174,26 +182,13 @@ export const useStore = create<AppState>((set, get) => ({
 
   setSearchQuery: (query: string) => {
     set({ searchQuery: query });
-    // Update filters with search query
-    const currentFilters = get().filters;
-    const newFilters = { 
-      ...currentFilters,
-      search: query || undefined
-    };
-    set({ filters: newFilters });
-    // Only load defects if there's a search query or it was cleared
-    get().loadDefects(newFilters);
+    // Apply search filter
+    get().loadDefects({ ...get().filters, search: query });
   },
 
   setFilters: (filters: FilterParams) => {
-    // Preserve search query in filters
-    const searchQuery = get().searchQuery;
-    const newFilters = { 
-      ...filters,
-      search: searchQuery || filters.search
-    };
-    set({ filters: newFilters });
-    get().loadDefects(newFilters);
+    set({ filters });
+    get().loadDefects(filters);
   },
 
   setSelectedWeek: (week: string) => {
