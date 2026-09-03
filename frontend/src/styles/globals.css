@@ -1,0 +1,134 @@
+/* frontend/src/styles/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-gray-200;
+  }
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-lg shadow-sm border border-gray-200 p-4;
+  }
+  .card-hover {
+    @apply hover:shadow-md transition-shadow cursor-pointer;
+  }
+  .badge-sm {
+    @apply px-2 py-0.5 text-xs rounded-full font-medium;
+  }
+  .badge-md {
+    @apply px-3 py-1 text-sm rounded-full font-medium;
+  }
+  
+  .block-track {
+    @apply bg-track/20 text-track border-l-4 border-track;
+  }
+  .block-power {
+    @apply bg-power/20 text-power border-l-4 border-power;
+  }
+  .block-signals {
+    @apply bg-signals/20 text-signals border-l-4 border-signals;
+  }
+  .block-combined {
+    @apply bg-combined/20 text-combined border-l-4 border-combined;
+  }
+  
+  .tier-safety-critical {
+    @apply bg-safety-critical/10 text-safety-critical border-safety-critical;
+  }
+  .tier-high {
+    @apply bg-orange-100 text-orange-700 border-orange-400;
+  }
+  .tier-normal {
+    @apply bg-blue-100 text-blue-700 border-blue-400;
+  }
+  .tier-deferred {
+    @apply bg-gray-100 text-gray-600 border-gray-400;
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400;
+}
+
+/* Timeline specific */
+.timeline-container {
+  @apply relative overflow-x-auto;
+}
+.timeline-row {
+  @apply flex items-center border-b border-gray-100 min-h-[48px];
+}
+.timeline-cell {
+  @apply flex-shrink-0 border-r border-gray-200;
+}
+
+/* Loading spinner */
+.spinner {
+  @apply inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent;
+}
+
+/* Additional utility classes */
+.text-track {
+  color: #F97316;
+}
+.text-power {
+  color: #EAB308;
+}
+.text-signals {
+  color: #3B82F6;
+}
+.text-combined {
+  color: #8B5CF6;
+}
+.text-safety-critical {
+  color: #EF4444;
+}
+
+.bg-track\/20 {
+  background-color: rgba(249, 115, 22, 0.2);
+}
+.bg-power\/20 {
+  background-color: rgba(234, 179, 8, 0.2);
+}
+.bg-signals\/20 {
+  background-color: rgba(59, 130, 246, 0.2);
+}
+.bg-combined\/20 {
+  background-color: rgba(139, 92, 246, 0.2);
+}
+.bg-safety-critical\/10 {
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.border-track {
+  border-color: #F97316;
+}
+.border-power {
+  border-color: #EAB308;
+}
+.border-signals {
+  border-color: #3B82F6;
+}
+.border-combined {
+  border-color: #8B5CF6;
+}
+.border-safety-critical {
+  border-color: #EF4444;
+}
