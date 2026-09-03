@@ -36,7 +36,7 @@ export function DefectCard({ defect, onSchedule, onDefer, onDelete }: DefectCard
     return severityContrib + overdueContrib + trafficContrib;
   }, [defect]);
 
-  const displayScore = defect.score || calculatedScore;
+  const displayScore = calculatedScore;
 
   return (
     <div className={clsx(
@@ -106,6 +106,7 @@ export function DefectCard({ defect, onSchedule, onDefer, onDelete }: DefectCard
           </div>
         </div>
       )}
+    <span>Score: {displayScore.toFixed(1)}/100</span>
     </div>
   );
 }
