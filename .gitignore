@@ -12,3 +12,6 @@ __pycache__/
 *.pyc
 .env
 .env.local
+.DS_Store
+.DS_Store
+.vscode/
