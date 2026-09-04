@@ -1,7 +1,7 @@
 // src/api/authClient.ts
 import { LoginCredentials, RegisterData, AuthResponse, User } from '@/types';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
 const USE_MOCK = true;
 
 // Mock user data

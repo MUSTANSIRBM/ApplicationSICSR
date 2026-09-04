@@ -1,9 +1,10 @@
 // src/pages/live.tsx
-import { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { BeforeAfterView } from '@/components/live/BeforeAfterView';
 import { DefectInjector } from '@/components/live/DefectInjector';
 import { useStore } from '@/store/useStore';
 import { withAuth } from '@/hoc/withAuth';
+import { ScheduleBlock } from '@/types';
 import toast from 'react-hot-toast';
 
 function LivePage() {
@@ -15,21 +16,31 @@ function LivePage() {
     injectDefect
   } = useStore();
 
+  const [beforeBlocks, setBeforeBlocks] = useState<ScheduleBlock[]>([]);
+  const hasInjected = useRef(false);
+
   useEffect(() => {
     loadSchedule(selectedWeek);
   }, [selectedWeek]);
 
+  useEffect(() => {
+    if (timelineData?.blocks && !hasInjected.current) {
+      setBeforeBlocks(timelineData.blocks);
+    }
+  }, [timelineData?.blocks]);
+
   const handleInject = async (defect: any) => {
     try {
+      setBeforeBlocks(timelineData?.blocks || []);
+      hasInjected.current = true;
       const result = await injectDefect(defect);
-      toast.success(`✅ Defect injected successfully`);
+      toast.success(`Defect injected successfully`);
       await loadSchedule(selectedWeek);
     } catch (error: any) {
-      toast.error(`❌ Failed to inject defect: ${error.message || 'Unknown error'}`);
+      toast.error(`Failed to inject defect: ${error.message || 'Unknown error'}`);
     }
   };
 
-  const beforeBlocks = timelineData?.blocks || [];
   const afterBlocks = timelineData?.blocks || [];
   const corridors = timelineData?.corridors || [];
 

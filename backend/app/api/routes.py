@@ -5,6 +5,7 @@ from datetime import datetime, date, timedelta
 from uuid import UUID
 import uuid
 import logging
+import threading
 from sqlmodel import Session
 from app.data.database import get_session
 from app.core.models import (
@@ -406,6 +407,19 @@ async def sync_from_adapters(session: Session = Depends(get_db)):
 # INCIDENT / SENSOR DECISION ENDPOINT
 # ============================================================
 
+_decision_engine = None
+_decision_engine_lock = threading.Lock()
+
+def _get_decision_engine():
+    global _decision_engine
+    if _decision_engine is None:
+        with _decision_engine_lock:
+            if _decision_engine is None:
+                from app.core.decision_engine import DecisionEngine
+                _decision_engine = DecisionEngine()
+    return _decision_engine
+
+
 @router.post("/incident", response_model=IncidentResponse)
 async def handle_incident(
         request: IncidentRequest,
@@ -415,59 +429,61 @@ async def handle_incident(
     Handle real-time sensor incident, run decision engine,
     and optionally bridge to the block planner as a repair defect.
 
-    This is the Bridge between Brain 1 (Sensor-Decision) and Brain 2 (Block Planner).
-
-    **Input:** 16 sensor features via IncidentRequest
-    **Output:** IncidentResponse with Decision, Physics, and optional repair_defect_id
-
-    **Bridge Logic:**
-    - If create_repair_defect=True, creates a safety-critical defect in the planner
-    - Severity mapping: 1-10 → 1-5 using min(5, 1 + severity_score // 2)
-    - Always flags as safety_critical=True with score=100.0
+    **Bridge:** Brain 1 (Sensor-Decision) -> Brain 2 (Block Planner).
+    **Severity mapping:** 1-10 -> 1-5 via ceil(incident_severity / 2).
     """
+    if request.create_repair_defect and not request.corridor:
+        raise HTTPException(400, "corridor is required when create_repair_defect=true")
+
     try:
-        # 1. Run the decision engine for immediate ML/Physics response
-        engine = DecisionEngine()
-        response = engine.evaluate(request)
+        engine = _get_decision_engine()
+        decision = engine.decide(request)
 
-        # 2. Bridge to Block Planner if requested
+        repair_id = None
         if request.create_repair_defect:
-            crud = CRUD(session)
-
-            # CRITICAL MAPPING: Map 1-10 incident severity down to 1-5 planner severity
-            mapped_severity = min(5, 1 + request.severity_score // 2)
-
-            # Create defect description
-            desc = f"Sensor incident: {request.obstruction_type.replace('_', ' ').title()} at {request.distance_to_obstacle_km}km"
+            crud_obj = CRUD(session)
+            mapped_severity = min(5, (request.severity_score + 1) // 2)
+            desc = (f"Sensor incident: {request.obstruction_type.replace('_', ' ').title()} "
+                    f"at {request.distance_to_obstacle_km}km, severity {request.severity_score}/10. "
+                    f"Engine decided '{decision['action']}' (source={decision['source']}, "
+                    f"confidence={decision['confidence']}).")
 
             new_defect = Defect(
                 id=uuid.uuid4(),
                 defect_id=f"INC-{uuid.uuid4().hex[:6].upper()}",
                 description=desc,
-                department=Department.TRACK,  # Default to Track for physical obstructions
+                department=Department.TRACK,
                 severity=mapped_severity,
                 overdue_days=0,
                 traffic_impact=5 if request.severity_score >= 8 else 3,
-                safety_critical=True,  # CRITICAL: Incident bridge ALWAYS flags as safety critical
+                safety_critical=True,
                 corridor_id=request.corridor,
                 system_source="SENSOR_ML",
                 status=DefectStatus.NEW,
-                score=100.0  # Ensures top priority in existing planner sorting logic
+                score=100.0,
             )
+            created_defect = crud_obj.create_defect(new_defect)
+            repair_id = str(created_defect.id)
+            logger.info("Bridged incident to repair defect: %s", created_defect.id)
 
-            # Save to existing database
-            created_defect = crud.create_defect(new_defect)
+        return IncidentResponse(
+            action=decision["action"],
+            confidence=decision.get("confidence"),
+            source=decision["source"],
+            reasons=decision["reasons"],
+            physics=decision["physics"],
+            probabilities=decision.get("probabilities"),
+            evidence=decision.get("evidence"),
+            decision_latency_ms=decision["decision_latency_ms"],
+            within_100ms_budget=decision["within_100ms_budget"],
+            repair_defect_id=repair_id,
+        )
 
-            # Attach the bridge ID to the response
-            response.repair_defect_id = str(created_defect.id)
-
-            logger.info(f"🔗 Bridged incident to repair defect: {created_defect.id}")
-
-        return response
-
-    except Exception as e:
-        logger.error(f"❌ Incident handling failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except Exception as exc:
+        logger.error("Incident handling failed: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
 
 
 # ============================================================

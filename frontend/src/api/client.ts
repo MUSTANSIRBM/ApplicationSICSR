@@ -8,6 +8,8 @@ import {
   SolveResult,
   ScheduleBlock,
   TrainSlot,
+  IncidentRequest,
+  IncidentResponse,
 } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
@@ -25,7 +27,7 @@ const mapDefect = (backendDefect: any): Defect => {
         : 'normal';
 
   return {
-    id: backendDefect.defect_id || backendDefect.id,
+    id: backendDefect.id || backendDefect.defect_id,
     department: backendDefect.department.toLowerCase() as 'track' | 'power' | 'signals',
     corridor: backendDefect.corridor_id,
     description: backendDefect.description,
@@ -170,20 +172,116 @@ export const api = {
     };
   },
 
-  // --- MUTATIONS (Requires Backend Implementation) ---
-  
+  // --- MUTATIONS ---
+
+  async sendIncident(data: IncidentRequest): Promise<IncidentResponse> {
+    const response = await fetch(`${API_BASE_URL}/incident`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
+      throw new Error(error.detail || `Incident request failed (${response.status})`);
+    }
+    return response.json();
+  },
+
   async updateDefectStatus(id: string, status: string, reason?: string): Promise<Defect> {
-    // TODO: Backend needs PATCH /api/v1/defects/{id}
-    throw new Error('Backend endpoint PATCH /api/v1/defects/{id} not yet implemented');
+    const params = new URLSearchParams();
+    params.append('status', status);
+    if (reason) params.append('deferral_reason', reason);
+    const response = await fetch(`${API_BASE_URL}/defects/${id}?${params.toString()}`, {
+      method: 'PATCH',
+    });
+    if (!response.ok) throw new Error('Failed to update defect');
+    return mapDefect(await response.json());
   },
 
   async deleteDefect(id: string): Promise<boolean> {
-    // TODO: Backend needs DELETE /api/v1/defects/{id}
-    throw new Error('Backend endpoint DELETE /api/v1/defects/{id} not yet implemented');
+    const response = await fetch(`${API_BASE_URL}/defects/${id}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Failed to delete defect');
+    const data = await response.json();
+    return data.success;
   },
 
   async updateBlockStatus(id: string, status: string): Promise<ScheduleBlock> {
-    // TODO: Backend needs PATCH /api/v1/blocks/{id}
-    throw new Error('Backend endpoint PATCH /api/v1/blocks/{id} not yet implemented');
+    const params = new URLSearchParams();
+    params.append('status', status);
+    const response = await fetch(`${API_BASE_URL}/blocks/${id}?${params.toString()}`, {
+      method: 'PATCH',
+    });
+    if (!response.ok) throw new Error('Failed to update block');
+    const defects = await this.getDefects();
+    return mapBlock(await response.json(), defects);
+  },
+
+  async scheduleDefect(id: string, weekStart?: string): Promise<void> {
+    const defects = await this.getDefects();
+    const defect = defects.find(d => d.id === id);
+    if (defect) {
+      await this.updateDefectStatus(id, 'SCHEDULED');
+    }
+    await this.reSolve({ keepLocked: true });
+  },
+
+  async deferDefect(id: string, reason?: string): Promise<void> {
+    await this.updateDefectStatus(id, 'DEFERRED', reason);
+  },
+
+  async editDefect(id: string, data: Partial<Defect>): Promise<void> {
+    const params = new URLSearchParams();
+    if (data.status) params.append('status', data.status);
+    if (data.deferReason) params.append('deferral_reason', data.deferReason);
+    const response = await fetch(`${API_BASE_URL}/defects/${id}?${params.toString()}`, {
+      method: 'PATCH',
+    });
+    if (!response.ok) throw new Error('Failed to edit defect');
+  },
+
+  async createDefect(defectData: any): Promise<Defect> {
+    const response = await fetch(`${API_BASE_URL}/defects`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(defectData),
+    });
+    if (!response.ok) throw new Error('Failed to create defect');
+    return mapDefect(await response.json());
+  },
+
+  async approveBlock(id: string): Promise<void> {
+    await this.updateBlockStatus(id, 'APPROVED');
+  },
+
+  async lockBlock(id: string): Promise<void> {
+    await this.updateBlockStatus(id, 'LOCKED');
+  },
+
+  async deleteBlock(id: string): Promise<void> {
+    throw new Error('Block deletion not yet implemented on backend');
+  },
+
+  async editBlock(id: string, data: Partial<ScheduleBlock>): Promise<void> {
+    if (data.status) {
+      const statusMap: Record<string, string> = {
+        proposed: 'PROPOSED', pending: 'PENDING',
+        approved: 'APPROVED', locked: 'LOCKED', executed: 'EXECUTED',
+      };
+      await this.updateBlockStatus(id, statusMap[data.status] || data.status);
+    }
+  },
+
+  async injectDefect(defect: any): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/defects/inject`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(defect),
+    });
+    if (!response.ok) throw new Error('Failed to inject defect');
+    const result = await response.json();
+    const solveResult = await this.reSolve({ keepLocked: true });
+    return { defect: mapDefect(result), blocksMoved: solveResult.blocksMoved };
   },
 };

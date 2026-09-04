@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { clsx } from 'clsx';
 import { 
-  LayoutDashboard, Calendar, Zap, BarChart3, User, Menu, X, LogOut, UserCircle 
+  LayoutDashboard, Calendar, Zap, BarChart3, User, Menu, X, LogOut, UserCircle, Radio 
 } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { NotificationDropdown } from './NotificationDropdown';
@@ -12,6 +12,7 @@ import { NotificationDropdown } from './NotificationDropdown';
 const tabs = [
   { name: 'Board', href: '/board', icon: LayoutDashboard },
   { name: 'Plan', href: '/plan', icon: Calendar },
+  { name: 'Sensor', href: '/sensor', icon: Radio },
   { name: 'Live', href: '/live', icon: Zap },
   { name: 'Impact', href: '/impact', icon: BarChart3 },
 ];

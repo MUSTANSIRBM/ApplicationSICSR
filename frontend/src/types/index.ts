@@ -129,15 +129,6 @@ export type Department = 'track' | 'power' | 'signals';
 export type Tier = 'safety-critical' | 'high' | 'normal' | 'deferred';
 export type BlockStatus = 'proposed' | 'pending' | 'approved' | 'locked' | 'executed';
 
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: 'admin' | 'user' | 'viewer';
-  avatar?: string;
-  createdAt: string;
-}
-
 export interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
@@ -164,7 +155,63 @@ export interface AuthResponse {
   expiresIn: number;
 }
 
-// src/types/index.ts - Add these types
+// ============================================================================
+// Sensor Incident Types
+// ============================================================================
+
+export type EnvironmentalCondition = 'clear' | 'rain' | 'heavy_rain' | 'fog' | 'snow' | 'flood';
+export type ObstructionType =
+  | 'landslide_debris' | 'boulder' | 'track_buckling' | 'fallen_tree'
+  | 'stranded_vehicle' | 'water_logging' | 'cattle_crossing'
+  | 'broken_rail' | 'signal_cable_theft' | 'sensor_miscount'
+  | 'environmental_false_positive' | 'unknown_obstruction' | 'equipment_failure_ahead';
+export type SensorType = 'track_circuit' | 'axle_counter' | 'vibration' | 'accelerometer';
+export type Action = 'proceed_with_caution' | 'reduce_speed' | 'reroute' | 'emergency_stop';
+
+export interface IncidentRequest {
+  train_speed_kmh: number;
+  distance_to_obstacle_km: number;
+  environmental_condition: EnvironmentalCondition;
+  weather_alert: boolean;
+  signal_quality_percent: number;
+  severity_score: number;
+  obstruction_type: ObstructionType;
+  alternative_route_available: boolean;
+  communication_latency_ms: number;
+  axle_balance?: number | null;
+  ahead_section_status: 'OCCUPIED' | 'CLEAR';
+  known_train_schedule: boolean;
+  distance_from_station_km: number;
+  sensor_type: SensorType;
+  create_repair_defect?: boolean;
+  corridor?: string;
+}
+
+export interface PhysicsData {
+  braking_distance_required_km: number;
+  time_to_obstacle_min: number;
+  effective_distance_km: number;
+  safe_stopping_possible: boolean;
+  weather_braking_multiplier?: number;
+  speed_advisory?: { recommended_speed_kmh: number | null; basis: string };
+}
+
+export interface IncidentResponse {
+  action: Action;
+  confidence: number | null;
+  source: string;
+  reasons: string[];
+  physics: PhysicsData;
+  probabilities: Record<string, number> | null;
+  evidence?: { summary: string; features: any[] } | null;
+  decision_latency_ms: number;
+  within_100ms_budget: boolean;
+  repair_defect_id?: string | null;
+}
+
+// ============================================================================
+// User Types
+// ============================================================================
 
 export interface User {
   id: string;
