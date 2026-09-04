@@ -1,16 +1,20 @@
 """
 planner/run_solve.py — CLI: python -m planner.run_solve
 
-Reads the seeded DB, scores in-scope defects (core), runs the CP-SAT
-weekly solver (core) with monthly reservations as SOFT windows,
-persists Solve + Blocks + TaskScores + Deferrals, prints the plan.
+Reads the DB, scores in-scope defects, solves with reservations (soft)
+and ANCHORS (previous same-week proposals — minimal diff, decision 4),
+persists everything, prints the plan.
+
+Re-plan hygiene: proposals from a PREVIOUS solve of THE SAME week are
+cancelled and become anchors for this solve. Other weeks' proposals are
+untouched — an injection on week N must not demolish weeks N+1..4.
 """
 from datetime import timedelta
 
 from sqlmodel import Session, select
 
 from core.scoring import score_all
-from core.solver import OccupiedIn, ReservationIn, TaskIn, solve
+from core.solver import AnchorIn, OccupiedIn, ReservationIn, TaskIn, solve
 from planner.db import engine
 from planner.models import (
     Block, BlockStatus, Corridor, Defect, Deferral, GoodsForecastSlot,
@@ -23,8 +27,42 @@ from planner.score_demo import corridor_pressure
 WEEK = timedelta(days=7)
 
 
+def _capture_anchors_and_reset(week_start):
+    """Anchors = this week's previous proposals. Reset them so their
+    defects re-enter the pool. APPROVED/LOCKED stay pinned (never here).
+    Other weeks' proposals stay active (never here)."""
+    anchors, stale_ids = [], []
+    with Session(engine) as s:
+        for b in s.exec(select(Block).where(
+                Block.status == BlockStatus.PROPOSED)).all():
+            if not b.solve_id:
+                continue
+            bsv = s.get(Solve, b.solve_id)
+            if not bsv or bsv.horizon_start != week_start:
+                continue
+            tids = tuple(sorted(d.id for d in s.exec(
+                select(Defect).where(Defect.block_id == b.id)).all()))
+            if tids:
+                anchors.append(AnchorIn(b.corridor_id, b.start, b.end, tids))
+            stale_ids.append(b.id)
+        for bid in stale_ids:
+            b = s.get(Block, bid)
+            for dd in s.exec(select(Defect).where(
+                    Defect.block_id == b.id)).all():
+                dd.status = TaskStatus.NEW
+                dd.block_id = None
+                s.add(dd)
+            b.status = BlockStatus.CANCELLED
+            s.add(b)
+        if stale_ids:
+            s.commit()
+    return anchors
+
+
 def run(week_start=PLAN_START, verbose=True):
     week_end = week_start + WEEK
+
+    anchors = _capture_anchors_and_reset(week_start)
 
     # ---------- read + score ----------
     with Session(engine) as s:
@@ -68,7 +106,7 @@ def run(week_start=PLAN_START, verbose=True):
         codes = {c.id: c.code for c in s.exec(select(Corridor)).all()}
 
     result = solve(week_start, week_end, tasks, occupied,
-                   reservations=reservations)
+                   reservations=reservations, anchors=anchors)
 
     # ---------- persist ----------
     with Session(engine) as s:
@@ -77,6 +115,12 @@ def run(week_start=PLAN_START, verbose=True):
         closure_saved = sum(
             dmap[tid].base_duration_min for b in bundled for tid in b.task_ids
         ) - sum(b.closure_minutes for b in bundled)
+
+        anchor_kept = sum(
+            1 for b in result.blocks
+            if any(a.corridor_id == b.corridor_id
+                   and tuple(sorted(b.task_ids)) == tuple(sorted(a.task_ids))
+                   and b.start == a.start for a in anchors))
 
         res_aligned = sum(
             1 for b in result.blocks
@@ -101,6 +145,8 @@ def run(week_start=PLAN_START, verbose=True):
                 "closure_saved_min": closure_saved,
                 "reservations_in_week": len(reservations),
                 "res_aligned": res_aligned,
+                "anchors": len(anchors),
+                "anchor_kept": anchor_kept,
             },
         )
         s.add(solve_row); s.commit(); s.refresh(solve_row)
@@ -149,9 +195,10 @@ def _print(solve_row, result, dmap, codes):
           f"deferred {st['deferred']} | escalated {st['escalated']}")
     print(f"blocks {st['blocks']} | bundled {st['bundled_blocks']} | "
           f"closure minutes saved by bundling: {st['closure_saved_min']}")
-    print(f"monthly alignment: {st['res_aligned']}/"
-          f"{st['blocks']} blocks inside reservation windows "
+    print(f"monthly alignment: {st['res_aligned']}/{st['blocks']} blocks "
           f"({st['reservations_in_week']} windows this week)")
+    print(f"minimal diff: {st['anchor_kept']}/{st['anchors']} anchors kept "
+          f"(unpinned blocks held their previous positions)")
     print("-" * 68)
     for b in result.blocks:
         refs = ", ".join(dmap[tid].source_ref for tid in b.task_ids)
@@ -176,3 +223,4 @@ def _print(solve_row, result, dmap, codes):
 
 if __name__ == "__main__":
     run()
+

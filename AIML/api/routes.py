@@ -1,10 +1,9 @@
 """
-api/routes.py — every endpoint. Field names are the FROZEN contract with
-the frontend (alignment doc §6). Renaming anything here breaks their
-types/index.ts — both teams sign off first.
+api/routes.py — every endpoint. Field names are the FROZEN contract.
 
-Direction of imports: api -> core/planner. core NEVER imports api.
-One engine: planner.db via planner.db.get_session. No second database.
+Step 7 changes: inject no longer resets proposals itself (run_solve
+resets same-week proposals and uses them as anchors — minimal diff).
+diff entries carry a human-readable reason for the frontend tooltip.
 """
 from datetime import date, datetime, time, timedelta
 from typing import Optional
@@ -62,8 +61,6 @@ def _defect_out(d: Defect, corridors: dict, departments: dict) -> dict:
 
 
 def _capture_active(session: Session) -> list:
-    """Snapshot of active blocks (PROPOSED/APPROVED/LOCKED) with their
-    task ids — the 'before' and 'after' states for the inject diff."""
     corridors, _ = _maps(session)
     out = []
     stmt = select(Block).where(Block.status.in_(
@@ -83,21 +80,35 @@ def _capture_active(session: Session) -> list:
 
 
 def _diff_blocks(before: list, after: list) -> dict:
-    """Match by (corridor, task set). Regrouped bundles show as new+gone
-    — honest limitation, refined in Step 7's minimal-diff work."""
+    """Match by (corridor, task set). Moved blocks carry a reason —
+    who displaced them, or an honest 'not pinned' note."""
     key = lambda b: (b["corridor"], tuple(b["task_ids"]))
     bmap = {key(b): b for b in before}
     amap = {key(b): b for b in after}
     unchanged, moved, new, gone = [], [], [], []
     for k, b in amap.items():
         if k in bmap:
-            (unchanged if b["start"] == bmap[k]["start"]
-             else moved).append(b)
+            if b["start"] == bmap[k]["start"]:
+                unchanged.append(b)
+            else:
+                prev = bmap[k]
+                displacers = [n for n in amap.values()
+                              if n is not b
+                              and n["corridor"] == b["corridor"]
+                              and n["start"] < prev["end"]
+                              and prev["start"] < n["end"]]
+                if displacers:
+                    reason = "displaced by " + ", ".join(
+                        r for n in displacers for r in n["source_refs"])
+                else:
+                    reason = "re-plan shifted position (block not pinned)"
+                moved.append({**b, "reason": reason})
         else:
             new.append(b)
     for k, b in bmap.items():
         if k not in amap:
-            gone.append(b)
+            gone.append({**b, "reason":
+                         "tasks re-grouped into a bundle or deferred"})
     return {"unchanged": unchanged, "moved": moved,
             "new": new, "gone": gone}
 
@@ -106,7 +117,6 @@ def _diff_blocks(before: list, after: list) -> dict:
 
 @router.get("/reference")
 def reference(session: Session = Depends(get_session)):
-    corridors, departments = _maps(session)
     cor_rows = session.exec(select(Corridor)).all()
     dep_rows = session.exec(select(Department)).all()
     return {
@@ -325,38 +335,31 @@ def inject_defect(req: InjectDefectRequest,
                 "message": "non-safety defect queued for next re-plan"}
 
     # ---- safety: immediate re-solve with diff ----
+    # run_solve resets this week's proposals and uses them as ANCHORS
+    # (minimal diff). Other weeks' plans survive. APPROVED/LOCKED pinned.
     before = _capture_active(session)
-
-    # reset proposals: their defects return to the pool.
-    # APPROVED/LOCKED blocks stay — pinned (locked decision 4).
-    for b in session.exec(select(Block).where(
-            Block.status == BlockStatus.PROPOSED)).all():
-        for dd in session.exec(select(Defect).where(
-                Defect.block_id == b.id)).all():
-            dd.status = TaskStatus.NEW
-            dd.block_id = None
-            session.add(dd)
-        b.status = BlockStatus.CANCELLED
-        session.add(b)
-    session.commit()
+    session.close()
 
     solve_id = run_weekly_solve(week_start=now, verbose=False)
 
-    session.expire_all()               # run() wrote via its own session
-    after = _capture_active(session)
-    diff = _diff_blocks(before, after)
-    sv = session.get(Solve, solve_id)
+    with Session(engine_from_dep()) as s2:
+        after = _capture_active(s2)
+        diff = _diff_blocks(before, after)
+        sv = s2.get(Solve, solve_id)
 
     return {"defect_id": d.id, "solve_id": solve_id, "replanned": True,
             "stats": sv.stats, "diff": diff}
 
 
+def engine_from_dep():
+    from planner.db import engine
+    return engine
+
+
 # ---------------------------------------------------------------- impact
 
 def _baseline(session: Session, week_start, week_end, defects) -> dict:
-    """Today's way (decision 6): each department plans alone, FCFS by
-    report time, blind to other departments. Bundling impossible by
-    construction; double-booked corridors are the expected outcome."""
+    """Today's way (decision 6): per-department FCFS, blind to others."""
     horizon = int((week_end - week_start).total_seconds() // 60)
 
     def to_min(t):
@@ -434,3 +437,4 @@ def get_impact(session: Session = Depends(get_session)):
     }
     return {"solve_id": sv.id, "week_start": _iso(week_start),
             "baseline": baseline, "planner": planner}
+

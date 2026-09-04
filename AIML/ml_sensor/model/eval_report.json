@@ -1,0 +1,241 @@
+{
+  "is_draft": true,
+  "n_scenarios": 10,
+  "n_agree": 10,
+  "agreement_rate": 1.0,
+  "target": 7,
+  "target_met": true,
+  "note": "disagreements are listed for OWNER REVIEW, never auto-failed -- a disagreement is either the model or the hand label being wrong, and both are findings",
+  "rows": [
+    {
+      "id": "ev01",
+      "title": "landslide in heavy rain at 120 km/h",
+      "expected_action": "emergency_stop",
+      "engine_action": "emergency_stop",
+      "source": "model",
+      "confidence": 0.9998,
+      "agreed": true,
+      "r1_fired": false,
+      "decision_latency_ms": 9.58,
+      "physics": {
+        "time_to_obstacle_min": 4.25,
+        "braking_distance_required_km": 4.608,
+        "effective_distance_km": 8.46,
+        "safe_stopping_possible": true,
+        "weather_braking_multiplier": 1.6
+      },
+      "reasons": [
+        "Trained decision model (xgboost) predicted 'emergency_stop' with confidence 0.9998 (above the 0.55 floor).",
+        "Key drivers: severity 9, alternate route not available, weather 'heavy_rain', time-to-obstacle 4.25 min.",
+        "R1 did not fire (scenario is in the gray zone the model is licensed to decide)."
+      ]
+    },
+    {
+      "id": "ev02",
+      "title": "freight train, axle counter miscount",
+      "expected_action": "proceed_with_caution",
+      "engine_action": "proceed_with_caution",
+      "source": "model",
+      "confidence": 0.996,
+      "agreed": true,
+      "r1_fired": false,
+      "decision_latency_ms": 6.62,
+      "physics": {
+        "time_to_obstacle_min": 11.0,
+        "braking_distance_required_km": 0.72,
+        "effective_distance_km": 10.993,
+        "safe_stopping_possible": true,
+        "weather_braking_multiplier": 1.0
+      },
+      "reasons": [
+        "Trained decision model (xgboost) predicted 'proceed_with_caution' with confidence 0.9960 (above the 0.55 floor).",
+        "Key drivers: severity 3, alternate route not available, weather 'clear', time-to-obstacle 11.0 min.",
+        "R1 did not fire (scenario is in the gray zone the model is licensed to decide)."
+      ]
+    },
+    {
+      "id": "ev03",
+      "title": "fog, likely environmental false positive",
+      "expected_action": "proceed_with_caution",
+      "engine_action": "proceed_with_caution",
+      "source": "model",
+      "confidence": 0.9985,
+      "agreed": true,
+      "r1_fired": false,
+      "decision_latency_ms": 7.24,
+      "physics": {
+        "time_to_obstacle_min": 7.2,
+        "braking_distance_required_km": 1.238,
+        "effective_distance_km": 8.993,
+        "safe_stopping_possible": true,
+        "weather_braking_multiplier": 1.1
+      },
+      "reasons": [
+        "Trained decision model (xgboost) predicted 'proceed_with_caution' with confidence 0.9985 (above the 0.55 floor).",
+        "Key drivers: severity 2, alternate route not available, weather 'fog', time-to-obstacle 7.2 min.",
+        "R1 did not fire (scenario is in the gray zone the model is licensed to decide)."
+      ]
+    },
+    {
+      "id": "ev04",
+      "title": "200 km/h, equipment failure ahead, no room",
+      "expected_action": "emergency_stop",
+      "engine_action": "emergency_stop",
+      "source": "model",
+      "confidence": 0.9973,
+      "agreed": true,
+      "r1_fired": false,
+      "decision_latency_ms": 6.09,
+      "physics": {
+        "time_to_obstacle_min": 1.5,
+        "braking_distance_required_km": 8.0,
+        "effective_distance_km": 4.956,
+        "safe_stopping_possible": false,
+        "weather_braking_multiplier": 1.0
+      },
+      "reasons": [
+        "Trained decision model (xgboost) predicted 'emergency_stop' with confidence 0.9973 (above the 0.55 floor).",
+        "Key drivers: severity 8, alternate route not available, weather 'clear', time-to-obstacle 1.5 min.",
+        "R1 did not fire (scenario is in the gray zone the model is licensed to decide)."
+      ]
+    },
+    {
+      "id": "ev05",
+      "title": "snow, broken rail detected",
+      "expected_action": "emergency_stop",
+      "engine_action": "emergency_stop",
+      "source": "model",
+      "confidence": 0.9988,
+      "agreed": true,
+      "r1_fired": false,
+      "decision_latency_ms": 7.15,
+      "physics": {
+        "time_to_obstacle_min": 4.36,
+        "braking_distance_required_km": 4.598,
+        "effective_distance_km": 7.973,
+        "safe_stopping_possible": true,
+        "weather_braking_multiplier": 1.9
+      },
+      "reasons": [
+        "Trained decision model (xgboost) predicted 'emergency_stop' with confidence 0.9988 (above the 0.55 floor).",
+        "Key drivers: severity 9, alternate route not available, weather 'snow', time-to-obstacle 4.36 min.",
+        "R1 did not fire (scenario is in the gray zone the model is licensed to decide)."
+      ]
+    },
+    {
+      "id": "ev06",
+      "title": "landslide, alternate route exists, sev 7",
+      "expected_action": "reroute",
+      "engine_action": "reroute",
+      "source": "model",
+      "confidence": 0.9958,
+      "agreed": true,
+      "r1_fired": false,
+      "decision_latency_ms": 6.76,
+      "physics": {
+        "time_to_obstacle_min": 6.67,
+        "braking_distance_required_km": 2.106,
+        "effective_distance_km": 9.985,
+        "safe_stopping_possible": true,
+        "weather_braking_multiplier": 1.3
+      },
+      "reasons": [
+        "Trained decision model (xgboost) predicted 'reroute' with confidence 0.9958 (above the 0.55 floor).",
+        "Key drivers: severity 7, alternate route available, weather 'rain', time-to-obstacle 6.67 min.",
+        "R1 did not fire (scenario is in the gray zone the model is licensed to decide)."
+      ]
+    },
+    {
+      "id": "ev07",
+      "title": "signal cable theft on the corridor",
+      "expected_action": "reduce_speed",
+      "engine_action": "reduce_speed",
+      "source": "model",
+      "confidence": 0.9999,
+      "agreed": true,
+      "r1_fired": false,
+      "decision_latency_ms": 6.98,
+      "physics": {
+        "time_to_obstacle_min": 9.0,
+        "braking_distance_required_km": 1.28,
+        "effective_distance_km": 11.994,
+        "safe_stopping_possible": true,
+        "weather_braking_multiplier": 1.0
+      },
+      "reasons": [
+        "Trained decision model (xgboost) predicted 'reduce_speed' with confidence 0.9999 (above the 0.55 floor).",
+        "Key drivers: severity 5, alternate route not available, weather 'clear', time-to-obstacle 9.0 min.",
+        "R1 did not fire (scenario is in the gray zone the model is licensed to decide)."
+      ]
+    },
+    {
+      "id": "ev08",
+      "title": "fog, axle miscount, high speed",
+      "expected_action": "reduce_speed",
+      "engine_action": "reduce_speed",
+      "source": "model",
+      "confidence": 0.994,
+      "agreed": true,
+      "r1_fired": false,
+      "decision_latency_ms": 7.96,
+      "physics": {
+        "time_to_obstacle_min": 2.6,
+        "braking_distance_required_km": 4.95,
+        "effective_distance_km": 6.471,
+        "safe_stopping_possible": true,
+        "weather_braking_multiplier": 1.1
+      },
+      "reasons": [
+        "Trained decision model (xgboost) predicted 'reduce_speed' with confidence 0.9940 (above the 0.55 floor).",
+        "Key drivers: severity 3, alternate route not available, weather 'fog', time-to-obstacle 2.6 min.",
+        "R1 did not fire (scenario is in the gray zone the model is licensed to decide)."
+      ]
+    },
+    {
+      "id": "ev09",
+      "title": "flooding across the track",
+      "expected_action": "reduce_speed",
+      "engine_action": "reduce_speed",
+      "source": "model",
+      "confidence": 0.9988,
+      "agreed": true,
+      "r1_fired": false,
+      "decision_latency_ms": 7.37,
+      "physics": {
+        "time_to_obstacle_min": 3.43,
+        "braking_distance_required_km": 1.666,
+        "effective_distance_km": 3.99,
+        "safe_stopping_possible": true,
+        "weather_braking_multiplier": 1.7
+      },
+      "reasons": [
+        "Trained decision model (xgboost) predicted 'reduce_speed' with confidence 0.9988 (above the 0.55 floor).",
+        "Key drivers: severity 6, alternate route not available, weather 'flood', time-to-obstacle 3.43 min.",
+        "R1 did not fire (scenario is in the gray zone the model is licensed to decide)."
+      ]
+    },
+    {
+      "id": "ev10",
+      "title": "unknown obstruction, moderate severity",
+      "expected_action": "reduce_speed",
+      "engine_action": "reduce_speed",
+      "source": "model",
+      "confidence": 0.9984,
+      "agreed": true,
+      "r1_fired": false,
+      "decision_latency_ms": 8.4,
+      "physics": {
+        "time_to_obstacle_min": 4.2,
+        "braking_distance_required_km": 2.0,
+        "effective_distance_km": 6.987,
+        "safe_stopping_possible": true,
+        "weather_braking_multiplier": 1.0
+      },
+      "reasons": [
+        "Trained decision model (xgboost) predicted 'reduce_speed' with confidence 0.9984 (above the 0.55 floor).",
+        "Key drivers: severity 7, alternate route available, weather 'clear', time-to-obstacle 4.2 min.",
+        "R1 did not fire (scenario is in the gray zone the model is licensed to decide)."
+      ]
+    }
+  ]
+}

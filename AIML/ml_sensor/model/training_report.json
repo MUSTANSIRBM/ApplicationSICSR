@@ -1,0 +1,276 @@
+{
+  "trained_at_seed": 42,
+  "split": {
+    "train": 3200,
+    "test": 800,
+    "test_size": 0.2,
+    "split_seed": 42,
+    "stratified": true
+  },
+  "label_noise_fraction": 0.04,
+  "class_balance_train": {
+    "proceed_with_caution": 359,
+    "reduce_speed": 1605,
+    "reroute": 458,
+    "emergency_stop": 778
+  },
+  "models": {
+    "random_forest": {
+      "macro_f1": 0.8867,
+      "accuracy": 0.905,
+      "per_class": {
+        "proceed_with_caution": {
+          "f1": 0.8889,
+          "support": 90
+        },
+        "reduce_speed": {
+          "f1": 0.9346,
+          "support": 401
+        },
+        "reroute": {
+          "f1": 0.8311,
+          "support": 115
+        },
+        "emergency_stop": {
+          "f1": 0.8923,
+          "support": 194
+        }
+      },
+      "confusion_matrix": {
+        "labels": [
+          "proceed_with_caution",
+          "reduce_speed",
+          "reroute",
+          "emergency_stop"
+        ],
+        "matrix": [
+          [
+            80,
+            3,
+            3,
+            4
+          ],
+          [
+            6,
+            379,
+            5,
+            11
+          ],
+          [
+            2,
+            15,
+            91,
+            7
+          ],
+          [
+            2,
+            13,
+            5,
+            174
+          ]
+        ]
+      },
+      "importances": [
+        {
+          "feature": "severity_score",
+          "importance": 0.2783
+        },
+        {
+          "feature": "time_to_obstacle_min",
+          "importance": 0.1535
+        },
+        {
+          "feature": "alternative_route_available",
+          "importance": 0.1085
+        },
+        {
+          "feature": "distance_to_obstacle_km",
+          "importance": 0.0865
+        },
+        {
+          "feature": "obstruction_type_code",
+          "importance": 0.086
+        },
+        {
+          "feature": "signal_quality_percent",
+          "importance": 0.0793
+        },
+        {
+          "feature": "train_speed_kmh",
+          "importance": 0.0564
+        },
+        {
+          "feature": "distance_from_station_km",
+          "importance": 0.0308
+        },
+        {
+          "feature": "weather_alert",
+          "importance": 0.0285
+        },
+        {
+          "feature": "communication_latency_ms",
+          "importance": 0.0282
+        },
+        {
+          "feature": "axle_balance",
+          "importance": 0.0243
+        },
+        {
+          "feature": "environmental_braking_multiplier",
+          "importance": 0.0185
+        },
+        {
+          "feature": "sensor_type_code",
+          "importance": 0.0094
+        },
+        {
+          "feature": "axle_balance_missing",
+          "importance": 0.0043
+        },
+        {
+          "feature": "ahead_section_occupied",
+          "importance": 0.0039
+        },
+        {
+          "feature": "known_train_schedule",
+          "importance": 0.0036
+        }
+      ]
+    },
+    "xgboost": {
+      "macro_f1": 0.9012,
+      "accuracy": 0.915,
+      "per_class": {
+        "proceed_with_caution": {
+          "f1": 0.905,
+          "support": 90
+        },
+        "reduce_speed": {
+          "f1": 0.942,
+          "support": 401
+        },
+        "reroute": {
+          "f1": 0.8673,
+          "support": 115
+        },
+        "emergency_stop": {
+          "f1": 0.8906,
+          "support": 194
+        }
+      },
+      "confusion_matrix": {
+        "labels": [
+          "proceed_with_caution",
+          "reduce_speed",
+          "reroute",
+          "emergency_stop"
+        ],
+        "matrix": [
+          [
+            81,
+            3,
+            3,
+            3
+          ],
+          [
+            3,
+            382,
+            5,
+            11
+          ],
+          [
+            2,
+            10,
+            98,
+            5
+          ],
+          [
+            3,
+            15,
+            5,
+            171
+          ]
+        ]
+      },
+      "importances": [
+        {
+          "feature": "alternative_route_available",
+          "importance": 0.2403
+        },
+        {
+          "feature": "severity_score",
+          "importance": 0.2101
+        },
+        {
+          "feature": "weather_alert",
+          "importance": 0.1931
+        },
+        {
+          "feature": "time_to_obstacle_min",
+          "importance": 0.1035
+        },
+        {
+          "feature": "obstruction_type_code",
+          "importance": 0.0529
+        },
+        {
+          "feature": "signal_quality_percent",
+          "importance": 0.0365
+        },
+        {
+          "feature": "environmental_braking_multiplier",
+          "importance": 0.03
+        },
+        {
+          "feature": "train_speed_kmh",
+          "importance": 0.0263
+        },
+        {
+          "feature": "ahead_section_occupied",
+          "importance": 0.0158
+        },
+        {
+          "feature": "distance_from_station_km",
+          "importance": 0.0147
+        },
+        {
+          "feature": "axle_balance",
+          "importance": 0.0147
+        },
+        {
+          "feature": "distance_to_obstacle_km",
+          "importance": 0.0144
+        },
+        {
+          "feature": "sensor_type_code",
+          "importance": 0.0144
+        },
+        {
+          "feature": "communication_latency_ms",
+          "importance": 0.0121
+        },
+        {
+          "feature": "axle_balance_missing",
+          "importance": 0.0105
+        },
+        {
+          "feature": "known_train_schedule",
+          "importance": 0.0105
+        }
+      ]
+    }
+  },
+  "winner": "xgboost",
+  "winner_test_macro_f1": 0.9012,
+  "expected_f1_band": [
+    0.9,
+    0.96
+  ],
+  "r2_fallback_preview": {
+    "confidence_floor": 0.55,
+    "test_fallback_rate": 0.0125,
+    "note": "tree ensembles are near-categorical here; low-confidence fallback firing rarely is HONEST, not a bug. The rate is reported, never hidden."
+  },
+  "bundle_path": "ml_sensor/model/decision_model.joblib",
+  "elapsed_seconds": 9.39
+}

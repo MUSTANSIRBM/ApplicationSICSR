@@ -11,7 +11,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from api.routes import router
 from planner.db import DB_FILE, create_all
-from api.incident import get_engine, router as incident_router   # ADD
 
 
 @asynccontextmanager
@@ -22,8 +21,6 @@ async def lifespan(app: FastAPI):
         from planner.seed import seed
         seed()
     create_all()
-    get_engine()      # ADD: warm the decision model at boot (trains
-                      # in-process if the joblib is missing)
     yield
 
 
@@ -39,9 +36,10 @@ app.add_middleware(
 )
 
 app.include_router(router)
-app.include_router(incident_router)   # ADD: POST /api/incident
 
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
