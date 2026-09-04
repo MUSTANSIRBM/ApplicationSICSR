@@ -1,4 +1,4 @@
-// src/pages/profile.tsx
+1// src/pages/profile.tsx
 import { useState, useRef, useEffect } from 'react';
 import { withAuth } from '@/hoc/withAuth';
 import { useAuthStore } from '@/store/useAuthStore';
