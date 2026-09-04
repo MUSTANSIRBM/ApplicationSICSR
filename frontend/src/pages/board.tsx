@@ -10,19 +10,19 @@ import { withAuth } from '@/hoc/withAuth';
 import { format, addDays } from 'date-fns';
 
 function BoardPage() {
-  const {
-    defects,
-    loading,
-    filters,
+  const { 
+    defects, 
+    loading, 
+    filters, 
     searchQuery,
     selectedWeek,
-    loadDefects,
-    scheduleDefect,
+    loadDefects, 
+    scheduleDefect, 
     deferDefect,
     deleteDefect,
     editDefect,
     createDefect,
-    setFilters,
+    setFilters, 
     setSearchQuery,
     loadSchedule
   } = useStore();
@@ -32,7 +32,7 @@ function BoardPage() {
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [selectedDefectId, setSelectedDefectId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-
+  
   // Create Defect Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newDefect, setNewDefect] = useState<Partial<Defect>>({
@@ -63,7 +63,7 @@ function BoardPage() {
   // ============================================
   // HANDLER FUNCTIONS
   // ============================================
-
+  
   const handleSchedule = async (id: string, weekStart?: string) => {
     setIsScheduling(id);
     try {
@@ -134,7 +134,7 @@ function BoardPage() {
     if (!newDefect.corridor?.trim()) {
       errors.corridor = 'Corridor is required';
     }
-
+    
     if (Object.keys(errors).length > 0) {
       setCreateErrors(errors);
       return;
@@ -194,7 +194,7 @@ function BoardPage() {
               )}
             </p>
           </div>
-
+          
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               onClick={() => setShowCreateModal(true)}
@@ -534,7 +534,7 @@ function BoardPage() {
                   <X className="w-4 h-4" />
                 </button>
               </div>
-
+              
               <div className="space-y-4">
                 <div className="bg-blue-50 rounded-xl p-4 border border-blue-200/50">
                   <div className="flex items-center gap-3">
@@ -549,7 +549,7 @@ function BoardPage() {
                     </div>
                   </div>
                 </div>
-
+                
                 <div className="flex gap-3">
                   <button
                     onClick={() => handleSchedule(selectedDefectId, selectedWeek)}
@@ -578,7 +578,7 @@ function BoardPage() {
                     Cancel
                   </button>
                 </div>
-
+                
                 <p className="text-xs text-gray-400 text-center">
                   The defect will be added to the selected week's schedule
                 </p>
