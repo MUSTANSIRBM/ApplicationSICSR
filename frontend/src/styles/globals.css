@@ -1,0 +1,1478 @@
+/* src/styles/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   BASE STYLES
+   ============================================ */
+@layer base {
+  * {
+    @apply border-gray-200;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  body {
+    @apply bg-gradient-to-br from-gray-50 via-white to-gray-50/80 text-gray-900 antialiased min-h-screen;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  ::selection {
+    @apply bg-blue-500/30 text-blue-900;
+  }
+
+  *:focus-visible {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+  }
+
+  /* Modern Scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-100/50 rounded-full;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gradient-to-b from-gray-300 to-gray-400 rounded-full hover:from-gray-400 hover:to-gray-500 transition-all duration-200;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply shadow-inner;
+  }
+}
+
+/* ============================================
+   COMPONENT CLASSES
+   ============================================ */
+@layer components {
+  /* --- Cards --- */
+  .card {
+    @apply bg-white/80 backdrop-blur-sm rounded-2xl shadow-soft border border-gray-200/60 p-6 transition-all duration-300 hover:shadow-glow hover:border-blue-200/50 hover:bg-white/90;
+  }
+  
+  .card-dark {
+    @apply bg-gray-900/80 backdrop-blur-sm rounded-2xl shadow-soft border border-gray-700/60 p-6 text-white transition-all duration-300;
+  }
+  
+  .card-hover {
+    @apply hover:shadow-glow hover:-translate-y-0.5 transition-all duration-300 cursor-pointer;
+  }
+
+  /* --- Buttons --- */
+  .btn {
+    @apply inline-flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 
+           focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed
+           relative overflow-hidden gap-2;
+  }
+  
+  .btn::after {
+    content: '';
+    @apply absolute inset-0 bg-white/20 opacity-0 transition-opacity duration-300;
+  }
+  
+  .btn:hover::after {
+    @apply opacity-100;
+  }
+  
+  .btn-primary {
+    @apply bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 
+           focus:ring-blue-500 shadow-md hover:shadow-lg active:scale-95;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-200/80 text-gray-800 hover:bg-gray-300/80 focus:ring-gray-500 backdrop-blur-sm;
+  }
+  
+  .btn-success {
+    @apply bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 
+           focus:ring-green-500 shadow-md hover:shadow-lg active:scale-95;
+  }
+  
+  .btn-danger {
+    @apply bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 
+           focus:ring-red-500 shadow-md hover:shadow-lg active:scale-95;
+  }
+  
+  .btn-warning {
+    @apply bg-gradient-to-r from-yellow-500 to-yellow-600 text-white hover:from-yellow-600 hover:to-yellow-700 
+           focus:ring-yellow-500 shadow-md hover:shadow-lg active:scale-95;
+  }
+  
+  .btn-ghost {
+    @apply bg-transparent text-gray-600 hover:bg-gray-100/80 focus:ring-gray-500 backdrop-blur-sm;
+  }
+  
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+  
+  .btn-lg {
+    @apply px-6 py-3.5 text-base;
+  }
+  
+  .btn-icon {
+    @apply p-2.5 rounded-xl;
+  }
+
+  /* --- Badges --- */
+  .badge {
+    @apply inline-flex items-center rounded-full font-medium transition-all duration-200;
+  }
+  
+  .badge-sm {
+    @apply px-2 py-0.5 text-[10px] gap-1;
+  }
+  
+  .badge-md {
+    @apply px-2.5 py-0.5 text-xs gap-1.5;
+  }
+  
+  .badge-lg {
+    @apply px-4 py-1 text-sm gap-2;
+  }
+
+  /* Badge Variants */
+  .badge-track {
+    @apply bg-orange-100 text-orange-800 border border-orange-200/50;
+  }
+  
+  .badge-power {
+    @apply bg-yellow-100 text-yellow-800 border border-yellow-200/50;
+  }
+  
+  .badge-signals {
+    @apply bg-blue-100 text-blue-800 border border-blue-200/50;
+  }
+  
+  .badge-combined {
+    @apply bg-purple-100 text-purple-800 border border-purple-200/50;
+  }
+  
+  .badge-safety-critical {
+    @apply bg-red-100 text-red-800 border border-red-200/50 animate-pulse-glow;
+  }
+  
+  .badge-high {
+    @apply bg-orange-100 text-orange-800 border border-orange-200/50;
+  }
+  
+  .badge-medium {
+    @apply bg-yellow-100 text-yellow-800 border border-yellow-200/50;
+  }
+  
+  .badge-low {
+    @apply bg-blue-100 text-blue-800 border border-blue-200/50;
+  }
+  
+  .badge-deferred {
+    @apply bg-gray-100 text-gray-600 border border-gray-200/50;
+  }
+  
+  .badge-approved {
+    @apply bg-green-100 text-green-800 border border-green-200/50;
+  }
+  
+  .badge-locked {
+    @apply bg-indigo-100 text-indigo-800 border border-indigo-200/50;
+  }
+  
+  .badge-pending {
+    @apply bg-yellow-100 text-yellow-800 border border-yellow-200/50;
+  }
+  
+  .badge-default {
+    @apply bg-gray-100 text-gray-600 border border-gray-200/50;
+  }
+  
+  .badge-success {
+    @apply bg-green-100 text-green-800 border border-green-200/50;
+  }
+  
+  .badge-warning {
+    @apply bg-yellow-100 text-yellow-800 border border-yellow-200/50;
+  }
+  
+  .badge-info {
+    @apply bg-cyan-100 text-cyan-800 border border-cyan-200/50;
+  }
+  
+  .badge-error {
+    @apply bg-red-100 text-red-800 border border-red-200/50;
+  }
+
+  /* --- Inputs --- */
+  .input {
+    @apply w-full rounded-xl border border-gray-300/80 bg-white/90 backdrop-blur-sm px-4 py-2.5 text-sm 
+           transition-all duration-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 
+           hover:border-gray-400/80 placeholder:text-gray-400/70;
+  }
+  
+  .input-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+  
+  .input-lg {
+    @apply px-5 py-3.5 text-base;
+  }
+  
+  .input-error {
+    @apply border-red-500 focus:border-red-500 focus:ring-red-500/20;
+  }
+  
+  .input-success {
+    @apply border-green-500 focus:border-green-500 focus:ring-green-500/20;
+  }
+
+  /* --- Select --- */
+  .select {
+    @apply w-full rounded-xl border border-gray-300/80 bg-white/90 backdrop-blur-sm px-4 py-2.5 text-sm 
+           transition-all duration-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 
+           hover:border-gray-400/80 appearance-none bg-no-repeat bg-right;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.75rem center;
+    background-size: 1.25em 1.25em;
+    padding-right: 2.75rem;
+  }
+  
+  .select-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+
+  /* --- Textarea --- */
+  .textarea {
+    @apply w-full rounded-xl border border-gray-300/80 bg-white/90 backdrop-blur-sm px-4 py-2.5 text-sm 
+           transition-all duration-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 
+           hover:border-gray-400/80 resize-y min-h-[80px] placeholder:text-gray-400/70;
+  }
+
+  /* --- Spinners --- */
+  .spinner {
+    @apply h-8 w-8 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600;
+  }
+  
+  .spinner-sm {
+    @apply h-4 w-4 border-2;
+  }
+  
+  .spinner-lg {
+    @apply h-12 w-12 border-4;
+  }
+  
+  .spinner-white {
+    @apply border-white/20 border-t-white;
+  }
+
+  /* --- Timeline --- */
+  .timeline-container {
+    @apply relative overflow-x-auto rounded-xl;
+  }
+  
+  .timeline-cell {
+    @apply flex-shrink-0 border-r border-gray-200/50;
+  }
+
+  /* --- Status Bar --- */
+  .status-bar {
+    @apply fixed bottom-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-xl border-t border-gray-200/80 
+           px-4 py-2 text-xs text-gray-600 flex items-center justify-between shadow-[0_-1px_10px_rgba(0,0,0,0.05)];
+  }
+
+  /* --- Dialog/Modal --- */
+  .dialog-overlay {
+    @apply fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in;
+  }
+  
+  .dialog-content {
+    @apply bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full animate-scale-in;
+  }
+}
+
+/* ============================================
+   DATE/TIME SPECIFIC STYLES
+   ============================================ */
+
+/* Date Badge */
+.date-badge {
+  @apply inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full 
+         bg-gray-100/80 text-gray-700 border border-gray-200/50;
+}
+
+.date-badge-today {
+  @apply bg-blue-50 text-blue-700 border-blue-200/50 ring-1 ring-blue-500/20;
+}
+
+.date-badge-tomorrow {
+  @apply bg-purple-50 text-purple-700 border-purple-200/50;
+}
+
+.date-badge-yesterday {
+  @apply bg-gray-50 text-gray-600 border-gray-200/50;
+}
+
+.date-badge-upcoming {
+  @apply bg-green-50 text-green-700 border-green-200/50;
+}
+
+.date-badge-overdue {
+  @apply bg-red-50 text-red-700 border-red-200/50 animate-pulse-glow;
+}
+
+/* Date Picker Styles */
+.date-picker {
+  @apply w-full rounded-xl border border-gray-300/80 bg-white/90 backdrop-blur-sm px-4 py-2.5 text-sm 
+         transition-all duration-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 
+         hover:border-gray-400/80 disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.date-picker-sm {
+  @apply px-3 py-1.5 text-xs;
+}
+
+.date-picker-lg {
+  @apply px-5 py-3.5 text-base;
+}
+
+/* Timeline Date Headers */
+.timeline-date-header {
+  @apply flex items-center justify-between px-3 py-2 rounded-lg 
+         bg-gradient-to-r from-gray-50 to-white border border-gray-200/50;
+}
+
+.timeline-date-header-today {
+  @apply bg-gradient-to-r from-blue-50 to-blue-50/50 border-blue-200/50 
+         ring-1 ring-blue-500/20;
+}
+
+.timeline-date-header-weekend {
+  @apply bg-gradient-to-r from-gray-100/50 to-gray-50/50 border-gray-200/30;
+}
+
+/* Date Separator */
+.date-separator {
+  @apply flex items-center gap-3 my-3;
+}
+
+.date-separator::before,
+.date-separator::after {
+  content: '';
+  @apply flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent;
+}
+
+.date-separator-text {
+  @apply text-xs font-medium text-gray-400 px-2 whitespace-nowrap;
+}
+
+/* Relative Time */
+.relative-time {
+  @apply text-xs text-gray-400 font-medium;
+}
+
+.relative-time-today {
+  @apply text-blue-600;
+}
+
+.relative-time-upcoming {
+  @apply text-green-600;
+}
+
+.relative-time-overdue {
+  @apply text-red-500 font-semibold;
+}
+
+/* Week Navigator */
+.week-navigator {
+  @apply flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-xl 
+         border border-gray-200/60 shadow-sm p-1;
+}
+
+.week-navigator-btn {
+  @apply p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-500 
+         hover:text-gray-700;
+}
+
+.week-navigator-btn:disabled {
+  @apply opacity-40 cursor-not-allowed hover:bg-transparent;
+}
+
+.week-navigator-label {
+  @apply px-3 py-1 text-sm font-medium text-gray-700 min-w-[180px] text-center;
+}
+
+/* Date Grid */
+.date-grid {
+  @apply grid grid-cols-7 gap-1;
+}
+
+.date-grid-cell {
+  @apply p-2 text-center rounded-lg transition-all duration-200;
+}
+
+.date-grid-cell-header {
+  @apply text-xs font-medium text-gray-400 uppercase tracking-wider;
+}
+
+.date-grid-cell-today {
+  @apply bg-blue-500 text-white font-semibold shadow-lg shadow-blue-500/25;
+}
+
+.date-grid-cell-selected {
+  @apply bg-blue-100 text-blue-700 font-semibold ring-2 ring-blue-500;
+}
+
+.date-grid-cell-has-event {
+  @apply relative;
+}
+
+.date-grid-cell-has-event::after {
+  content: '';
+  @apply absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-blue-500;
+}
+
+.date-grid-cell-has-event-today::after {
+  @apply bg-white;
+}
+
+/* Time Picker */
+.time-picker {
+  @apply w-full rounded-xl border border-gray-300/80 bg-white/90 backdrop-blur-sm px-4 py-2.5 text-sm 
+         transition-all duration-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 
+         hover:border-gray-400/80;
+}
+
+/* Schedule Time Slots */
+.time-slot {
+  @apply flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium 
+         bg-gray-50 border border-gray-200/50 transition-all duration-200;
+}
+
+.time-slot-available {
+  @apply bg-green-50 border-green-200 text-green-700 hover:bg-green-100;
+}
+
+.time-slot-unavailable {
+  @apply bg-red-50 border-red-200 text-red-500 opacity-50 cursor-not-allowed;
+}
+
+.time-slot-selected {
+  @apply bg-blue-50 border-blue-300 text-blue-700 ring-2 ring-blue-500/30;
+}
+
+/* Duration Badge */
+.duration-badge {
+  @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full 
+         bg-gray-100 text-gray-600;
+}
+
+.duration-badge-short {
+  @apply bg-green-100 text-green-700;
+}
+
+.duration-badge-medium {
+  @apply bg-yellow-100 text-yellow-700;
+}
+
+.duration-badge-long {
+  @apply bg-red-100 text-red-700;
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(20px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.3); }
+  50% { box-shadow: 0 0 40px rgba(239, 68, 68, 0.6); }
+}
+
+@keyframes pulseGlowBlue {
+  0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
+  50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.6); }
+}
+
+@keyframes pulseGlowGreen {
+  0%, 100% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.3); }
+  50% { box-shadow: 0 0 40px rgba(34, 197, 94, 0.6); }
+}
+
+@keyframes bounceIn {
+  0% { transform: scale(0.3); opacity: 0; }
+  50% { transform: scale(1.05); }
+  70% { transform: scale(0.9); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Animation Classes */
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out forwards;
+}
+
+.animate-slide-down {
+  animation: slideDown 0.3s ease-out forwards;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.3s ease-out forwards;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 1.5s ease-in-out infinite;
+}
+
+.animate-pulse-glow-blue {
+  animation: pulseGlowBlue 1.5s ease-in-out infinite;
+}
+
+.animate-pulse-glow-green {
+  animation: pulseGlowGreen 1.5s ease-in-out infinite;
+}
+
+.animate-bounce-in {
+  animation: bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out forwards;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+
+/* Stagger children */
+.stagger-children > * {
+  opacity: 0;
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.10s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.20s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.30s; }
+.stagger-children > *:nth-child(7) { animation-delay: 0.35s; }
+.stagger-children > *:nth-child(8) { animation-delay: 0.40s; }
+.stagger-children > *:nth-child(9) { animation-delay: 0.45s; }
+.stagger-children > *:nth-child(10) { animation-delay: 0.50s; }
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+/* Shadows */
+.shadow-soft {
+  box-shadow: 0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04);
+}
+
+.shadow-glow {
+  box-shadow: 0 0 40px rgba(59, 130, 246, 0.15);
+}
+
+.shadow-glow-red {
+  box-shadow: 0 0 40px rgba(239, 68, 68, 0.15);
+}
+
+.shadow-glow-green {
+  box-shadow: 0 0 40px rgba(34, 197, 94, 0.15);
+}
+
+/* Gradients */
+.bg-gradient-primary {
+  @apply bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-600;
+}
+
+.bg-gradient-success {
+  @apply bg-gradient-to-r from-green-500 via-green-600 to-emerald-600;
+}
+
+.bg-gradient-danger {
+  @apply bg-gradient-to-r from-red-500 via-red-600 to-rose-600;
+}
+
+.bg-gradient-warning {
+  @apply bg-gradient-to-r from-yellow-500 via-yellow-600 to-amber-600;
+}
+
+.bg-gradient-subtle {
+  @apply bg-gradient-to-br from-gray-50 via-white to-gray-50/80;
+}
+
+/* Text gradients */
+.text-gradient-primary {
+  @apply bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent;
+}
+
+.text-gradient-success {
+  @apply bg-gradient-to-r from-green-500 to-emerald-600 bg-clip-text text-transparent;
+}
+
+/* Glass effects */
+.glass {
+  @apply bg-white/70 backdrop-blur-xl border border-white/20;
+}
+
+.glass-dark {
+  @apply bg-gray-900/70 backdrop-blur-xl border border-gray-800/20;
+}
+
+/* Transitions */
+.transition-smooth {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transition-bounce {
+  transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* ============================================
+   SPECIFIC COMPONENT OVERRIDES
+   ============================================ */
+/* Toast Customization */
+.go3958317564 {
+  @apply font-medium rounded-2xl shadow-2xl border border-gray-100/50 backdrop-blur-sm;
+}
+
+/* React Hot Toast */
+.toast-success {
+  @apply bg-green-50 border-green-200 text-green-800;
+}
+
+.toast-error {
+  @apply bg-red-50 border-red-200 text-red-800;
+}
+
+.toast-warning {
+  @apply bg-yellow-50 border-yellow-200 text-yellow-800;
+}
+
+.toast-info {
+  @apply bg-blue-50 border-blue-200 text-blue-800;
+}
+
+/* KBD styling */
+kbd {
+  font-family: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+  @apply bg-gray-100/80 px-2 py-0.5 rounded-md border border-gray-300/50 text-[10px] font-medium shadow-sm;
+}
+
+/* Code blocks */
+code {
+  @apply font-mono text-sm bg-gray-100/80 px-1.5 py-0.5 rounded-md;
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+/* Mobile First */
+@media (max-width: 640px) {
+  .card {
+    @apply p-4 rounded-xl;
+  }
+  
+  .status-bar .flex.items-center {
+    @apply flex-wrap gap-1 text-[10px];
+  }
+  
+  .status-bar .flex.items-center.gap-4 {
+    @apply gap-2;
+  }
+  
+  .btn {
+    @apply px-3 py-2 text-xs;
+  }
+  
+  .btn-lg {
+    @apply px-4 py-2.5 text-sm;
+  }
+  
+  .input, .select, .textarea {
+    @apply px-3 py-2 text-sm;
+  }
+  
+  .dialog-content {
+    @apply mx-4 p-4;
+  }
+}
+
+/* Tablet */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .card {
+    @apply p-5;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .status-bar,
+  .top-nav,
+  .no-print {
+    @apply hidden !important;
+  }
+  
+  body {
+    @apply bg-white !important;
+  }
+  
+  .card {
+    @apply shadow-none border-2 !important;
+  }
+}
+
+/* ============================================
+   DARK MODE SUPPORT (Optional)
+   ============================================ */
+@media (prefers-color-scheme: dark) {
+  .dark\:card {
+    @apply bg-gray-800/80 border-gray-700/60 text-gray-100;
+  }
+  
+  .dark\:bg-gradient-subtle {
+    @apply bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900/80;
+  }
+  
+  .dark\:text-gradient-primary {
+    @apply bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent;
+  }
+}
+
+/* ============================================
+   CUSTOM SCROLLBAR FOR SPECIFIC ELEMENTS
+   ============================================ */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  @apply bg-gray-100/50 rounded-full;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-full hover:bg-gray-400 transition-colors;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ============================================
+   LOADING SKELETON
+   ============================================ */
+.skeleton {
+  @apply animate-pulse bg-gray-200/70 rounded-lg;
+}
+
+.skeleton-text {
+  @apply h-3 rounded bg-gray-200/70 animate-pulse;
+}
+
+.skeleton-text-sm {
+  @apply h-2 rounded bg-gray-200/70 animate-pulse;
+}
+
+.skeleton-text-lg {
+  @apply h-5 rounded bg-gray-200/70 animate-pulse;
+}
+
+.skeleton-circle {
+  @apply rounded-full bg-gray-200/70 animate-pulse;
+}
+
+.skeleton-card {
+  @apply rounded-2xl bg-gray-100/50 animate-pulse p-6 border border-gray-200/50;
+}
+
+/* ============================================
+   GRADIENT TEXT ANIMATION
+   ============================================ */
+.animate-gradient-text {
+  background-size: 200% 200%;
+  animation: gradientShift 3s ease-in-out infinite;
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* ============================================
+   STATUS INDICATOR DOTS
+   ============================================ */
+.status-dot {
+  @apply relative inline-flex h-2.5 w-2.5 rounded-full;
+}
+
+.status-dot::after {
+  content: '';
+  @apply absolute inset-0 rounded-full animate-ping opacity-75;
+}
+
+.status-dot-green {
+  @apply bg-green-500;
+}
+
+.status-dot-green::after {
+  @apply bg-green-400;
+}
+
+.status-dot-red {
+  @apply bg-red-500;
+}
+
+.status-dot-red::after {
+  @apply bg-red-400;
+}
+
+.status-dot-yellow {
+  @apply bg-yellow-500;
+}
+
+.status-dot-yellow::after {
+  @apply bg-yellow-400;
+}
+
+.status-dot-blue {
+  @apply bg-blue-500;
+}
+
+.status-dot-blue::after {
+  @apply bg-blue-400;
+}
+
+/* ============================================
+   CONTENT CONTAINERS
+   ============================================ */
+.content-container {
+  @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8;
+}
+
+.section-title {
+  @apply text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-3;
+}
+
+.section-subtitle {
+  @apply text-sm text-gray-500 mt-1;
+}
+
+/* ============================================
+   DIVIDER
+   ============================================ */
+.divider {
+  @apply flex items-center gap-4 text-gray-400 text-sm;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  @apply flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent;
+}
+
+/* ============================================
+   GRID LAYOUTS
+   ============================================ */
+.grid-auto-fit {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.grid-auto-fill {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+/* ============================================
+   COUNTRIES & DEPARTMENTS COLORS
+   ============================================ */
+.text-track { color: #F97316; }
+.text-power { color: #EAB308; }
+.text-signals { color: #3B82F6; }
+.text-combined { color: #8B5CF6; }
+.text-safety-critical { color: #EF4444; }
+
+.bg-track\/10 { background-color: rgba(249, 115, 22, 0.1); }
+.bg-power\/10 { background-color: rgba(234, 179, 8, 0.1); }
+.bg-signals\/10 { background-color: rgba(59, 130, 246, 0.1); }
+.bg-combined\/10 { background-color: rgba(139, 92, 246, 0.1); }
+.bg-safety-critical\/10 { background-color: rgba(239, 68, 68, 0.1); }
+
+.border-track { border-color: #F97316; }
+.border-power { border-color: #EAB308; }
+.border-signals { border-color: #3B82F6; }
+.border-combined { border-color: #8B5CF6; }
+.border-safety-critical { border-color: #EF4444; }
+
+/* ============================================
+   KEYBOARD SHORTCUT HINT
+   ============================================ */
+.kbd-hint {
+  @apply text-xs text-gray-400 flex items-center gap-1.5;
+}
+
+.kbd-hint kbd {
+  @apply px-1.5 py-0.5 text-[10px] bg-gray-100 rounded border border-gray-300 font-mono shadow-sm;
+}
+
+/* ============================================
+   BADGE ANIMATED
+   ============================================ */
+.badge-animated {
+  @apply transition-all duration-300;
+}
+
+.badge-animated:hover {
+  @apply transform scale-105 shadow-md;
+}
+
+/* ============================================
+   CUSTOM CHECKBOX
+   ============================================ */
+.checkbox-custom {
+  @apply w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 transition-all duration-200;
+}
+
+/* ============================================
+   CUSTOM RADIO
+   ============================================ */
+.radio-custom {
+  @apply w-4 h-4 border-gray-300 text-blue-600 focus:ring-blue-500 transition-all duration-200;
+}
+
+/* ============================================
+   RESPONSIVE TABLE
+   ============================================ */
+.table-responsive {
+  @apply w-full overflow-x-auto;
+}
+
+.table-responsive table {
+  @apply w-full min-w-[600px];
+}
+
+/* ============================================
+   PRINT HIDE
+   ============================================ */
+@media print {
+  .print\:hidden {
+    display: none !important;
+  }
+  .print\:block {
+    display: block !important;
+  }
+}
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================
+   FOCUS VISIBLE
+   ============================================ */
+.focus-visible\:ring-2:focus-visible {
+  @apply ring-2 ring-blue-500 ring-offset-2;
+}
+
+/* ============================================
+   SCROLL MARGIN
+   ============================================ */
+.scroll-mt-20 {
+  scroll-margin-top: 5rem;
+}
+
+/* ============================================
+   DATE PICKER OVERRIDES
+   ============================================ */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  @apply text-gray-400 hover:text-gray-600 transition-colors cursor-pointer;
+}
+
+input[type="date"]::-webkit-datetime-edit {
+  @apply text-gray-700;
+}
+
+input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  @apply flex gap-1;
+}
+
+input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-year-field {
+  @apply px-0.5;
+}
+
+/* ============================================
+   CHART OVERRIDES
+   ============================================ */
+.recharts-tooltip-wrapper {
+  @apply z-50;
+}
+
+.recharts-default-tooltip {
+  @apply !bg-white/90 !backdrop-blur-sm !border !border-gray-200/50 !rounded-xl !shadow-lg !p-3;
+}
+
+.recharts-tooltip-item {
+  @apply !text-xs;
+}
+
+.recharts-tooltip-label {
+  @apply !text-sm !font-medium !text-gray-700;
+}
+
+/* ============================================
+   TRANSITION EFFECTS
+   ============================================ */
+.hover-lift {
+  @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-xl;
+}
+
+.hover-scale {
+  @apply transition-all duration-300 hover:scale-105;
+}
+
+.hover-glow {
+  @apply transition-all duration-300 hover:shadow-glow;
+}
+
+/* ============================================
+   BORDER GRADIENTS
+   ============================================ */
+.border-gradient-primary {
+  border-image: linear-gradient(to right, #3B82F6, #6366F1) 1;
+}
+
+.border-gradient-success {
+  border-image: linear-gradient(to right, #22C55E, #10B981) 1;
+}
+
+.border-gradient-danger {
+  border-image: linear-gradient(to right, #EF4444, #F43F5E) 1;
+}
+
+/* ============================================
+   DASHBOARD SPECIFIC
+   ============================================ */
+.dashboard-card {
+  @apply relative overflow-hidden;
+}
+
+.dashboard-card::before {
+  content: '';
+  @apply absolute -top-1/2 -right-1/2 w-1/2 h-1/2 bg-gradient-to-br from-blue-500/5 to-transparent rounded-full;
+}
+
+.dashboard-card::after {
+  content: '';
+  @apply absolute -bottom-1/2 -left-1/2 w-1/2 h-1/2 bg-gradient-to-tr from-purple-500/5 to-transparent rounded-full;
+}
+
+/* ============================================
+   ANIMATED PROGRESS BAR
+   ============================================ */
+.progress-bar {
+  @apply relative overflow-hidden rounded-full bg-gray-200;
+}
+
+.progress-bar-fill {
+  @apply h-full rounded-full transition-all duration-1000 ease-out;
+}
+
+.progress-bar-fill-animated {
+  @apply relative;
+}
+
+.progress-bar-fill-animated::after {
+  content: '';
+  @apply absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent;
+  animation: shimmer 2s infinite;
+}
+
+/* ============================================
+   EQUAL HEIGHT GRID FIX
+   ============================================ */
+.equal-height-grid {
+  @apply grid gap-4;
+  grid-auto-rows: 1fr;
+}
+
+.equal-height-grid > * {
+  @apply h-full;
+}
+
+/* Defect Card consistent sizing */
+.defect-card-container {
+  @apply h-full flex flex-col;
+}
+
+.defect-card {
+  @apply flex-1 flex flex-col;
+}
+
+.defect-card-body {
+  @apply flex-1;
+}
+
+.defect-card-actions {
+  @apply mt-auto pt-3 border-t border-gray-100;
+}
+
+/* Consistent min-height for cards */
+.card-min-height {
+  min-height: 220px;
+}
+
+.card-min-height-sm {
+  min-height: 180px;
+}
+
+/* Group header styling */
+.group-header {
+  @apply flex items-center gap-2 pt-4 pb-2;
+}
+
+.group-header-label {
+  @apply flex items-center gap-2;
+}
+
+.group-header-divider {
+  @apply flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent;
+}
+
+/* Equal height grid for defect list */
+.defect-grid {
+  @apply grid gap-4;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-auto-rows: 1fr;
+}
+
+.defect-grid > * {
+  @apply h-full;
+}
+
+/* Responsive grid */
+@media (max-width: 640px) {
+  .defect-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .defect-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1025px) {
+  .defect-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ============================================
+   ENHANCED DATE PICKER STYLES
+   ============================================ */
+
+/* Date Picker Container */
+.date-picker-wrapper {
+  @apply relative;
+}
+
+/* Date Picker Input */
+.date-picker-input {
+  @apply w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm 
+         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent 
+         transition-all duration-200 bg-white;
+}
+
+.date-picker-input:focus {
+  @apply shadow-glow;
+}
+
+/* Date Picker Icon */
+.date-picker-icon {
+  @apply absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none;
+}
+
+/* Date Picker - Week Display */
+.date-picker-week-display {
+  @apply mt-1.5 text-xs flex items-center gap-1.5;
+}
+
+.date-picker-week-display-today {
+  @apply text-blue-600 font-medium;
+}
+
+.date-picker-week-display-upcoming {
+  @apply text-green-600 font-medium;
+}
+
+.date-picker-week-display-past {
+  @apply text-gray-400;
+}
+
+/* Date Picker - Calendar Popup */
+.date-picker-calendar {
+  @apply absolute top-full left-0 mt-1 bg-white rounded-xl shadow-2xl border border-gray-200 
+         p-3 z-50 min-w-[280px] animate-fade-in;
+}
+
+.date-picker-calendar-header {
+  @apply flex items-center justify-between mb-2;
+}
+
+.date-picker-calendar-nav {
+  @apply p-1 rounded-lg hover:bg-gray-100 transition-colors;
+}
+
+.date-picker-calendar-grid {
+  @apply grid grid-cols-7 gap-0.5;
+}
+
+.date-picker-calendar-day {
+  @apply p-1.5 text-center text-xs rounded-lg hover:bg-blue-50 hover:text-blue-600 
+         transition-colors cursor-pointer;
+}
+
+.date-picker-calendar-day-today {
+  @apply bg-blue-500 text-white hover:bg-blue-600;
+}
+
+.date-picker-calendar-day-selected {
+  @apply bg-blue-100 text-blue-700 font-semibold ring-2 ring-blue-500;
+}
+
+.date-picker-calendar-day-disabled {
+  @apply text-gray-300 cursor-not-allowed hover:bg-transparent;
+}
+
+.date-picker-calendar-day-weekend {
+  @apply text-red-400;
+}
+
+/* Schedule Week Display */
+.schedule-week-display {
+  @apply flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border border-gray-200/50;
+}
+
+.schedule-week-display-icon {
+  @apply text-gray-400;
+}
+
+.schedule-week-display-text {
+  @apply text-sm text-gray-700;
+}
+
+.schedule-week-display-date {
+  @apply text-sm font-medium text-blue-600;
+}
+
+/* Overdue Badge in Date Section */
+.overdue-badge {
+  @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full;
+}
+
+.overdue-badge-none {
+  @apply bg-green-100 text-green-700;
+}
+
+.overdue-badge-low {
+  @apply bg-yellow-100 text-yellow-700;
+}
+
+.overdue-badge-medium {
+  @apply bg-orange-100 text-orange-700;
+}
+
+.overdue-badge-high {
+  @apply bg-red-100 text-red-700 animate-pulse;
+}
+
+/* Date Section Card */
+.date-section-card {
+  @apply bg-gradient-to-br from-gray-50 to-white rounded-xl p-4 border border-gray-200/50;
+}
+
+.date-section-title {
+  @apply text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2;
+}
+
+.date-section-title-icon {
+  @apply text-gray-400;
+}
+
+/* Calendar Icon in Date Input */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  @apply opacity-0 absolute right-0 w-full h-full cursor-pointer;
+}
+
+input[type="date"] {
+  @apply appearance-none;
+}
+
+/* Date Picker Focus Ring */
+input[type="date"]:focus {
+  @apply ring-2 ring-blue-500/20 border-blue-500;
+}
+
+/* ============================================
+   NOTIFICATION STYLES
+   ============================================ */
+
+/* Notification Dropdown */
+.notification-dropdown {
+  @apply absolute right-0 mt-2 w-[420px] max-h-[500px] bg-white rounded-2xl shadow-2xl border border-gray-200/80 overflow-hidden animate-slide-down z-50;
+}
+
+/* Notification Item - Without 'group' to avoid @apply group error */
+.notification-item {
+  @apply relative flex items-start gap-3 px-4 py-3 border-b border-gray-100/80 transition-all duration-200 cursor-pointer;
+}
+
+.notification-item-unread {
+  @apply bg-blue-50/50 hover:bg-blue-50;
+}
+
+.notification-item-read {
+  @apply hover:bg-gray-50;
+}
+
+.notification-item:hover {
+  @apply pl-5;
+}
+
+.notification-dot {
+  @apply absolute left-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-blue-500;
+}
+
+.notification-icon {
+  @apply flex-shrink-0 p-1.5 rounded-lg border;
+}
+
+.notification-icon-success {
+  @apply bg-green-50 border-green-200 text-green-500;
+}
+
+.notification-icon-error {
+  @apply bg-red-50 border-red-200 text-red-500;
+}
+
+.notification-icon-warning {
+  @apply bg-yellow-50 border-yellow-200 text-yellow-500;
+}
+
+.notification-icon-info {
+  @apply bg-blue-50 border-blue-200 text-blue-500;
+}
+
+/* Notification Bell Animation */
+@keyframes bellRing {
+  0% { transform: rotate(0); }
+  20% { transform: rotate(15deg); }
+  40% { transform: rotate(-15deg); }
+  60% { transform: rotate(10deg); }
+  80% { transform: rotate(-10deg); }
+  100% { transform: rotate(0); }
+}
+
+.bell-ring {
+  animation: bellRing 0.5s ease-in-out;
+}
+
+/* Notification Badge Pulse */
+@keyframes badgePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+.badge-pulse {
+  animation: badgePulse 1.5s ease-in-out infinite;
+}
