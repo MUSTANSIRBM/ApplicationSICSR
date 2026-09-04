@@ -1,4 +1,0 @@
-// frontend/.eslintrc.json
-{
-  "extends": "next/core-web-vitals"
-}

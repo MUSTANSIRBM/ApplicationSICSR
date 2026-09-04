@@ -74,9 +74,9 @@ class BlockDB(SQLModel, table=True):
     start_time: datetime
     end_time: datetime
     department: str
-    defect_ids: str  # Comma-separated UUIDs
+    defect_ids: str
     is_combined: bool = False
-    combined_departments: str  # Comma-separated department names
+    combined_departments: str
     status: str = "PROPOSED"
     locked_at: datetime = None
     executed_at: datetime = None

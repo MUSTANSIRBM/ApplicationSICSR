@@ -145,3 +145,37 @@ class ImpactMetrics(BaseModel):
     utilization_improvement: float  # percentage
     deferred_count: int
     safety_critical_handled: int
+
+class WeeklyTrendItem(BaseModel):
+    """Weekly trend data point for impact dashboard."""
+    day: str = Field(..., description="Day of week (Mon, Tue, etc.)")
+    planned: int = Field(..., description="Planned closures")
+    actual: int = Field(..., description="Actual closures")
+
+class ImpactMetrics(BaseModel):
+    """Enhanced impact metrics with dashboard support."""
+    total_closures_baseline: int
+    total_closures_optimized: int
+    closure_hours_baseline: float
+    closure_hours_optimized: float
+    hours_saved: float
+    percent_improvement: float
+    combined_blocks_count: int
+    utilization_improvement: float
+    deferred_count: int
+    safety_critical_handled: int
+
+    # NEW FIELDS for dashboard
+    weekly_trend: List[WeeklyTrendItem] = Field(default_factory=list, description="Weekly trend data")
+    by_department: Dict[str, int] = Field(default_factory=dict, description="Defects by department")
+    cost_savings: float = Field(default=0.0, description="Estimated cost savings in currency units")
+
+class SystemStatusResponse(BaseModel):
+    """System status for top-bar metrics."""
+    is_live: bool = Field(..., description="Whether the system is live")
+    last_solve_time_ms: int = Field(..., description="Last solve time in milliseconds")
+    total_tasks: int = Field(..., description="Total tasks in system")
+    critical_waiting: int = Field(..., description="Critical defects waiting")
+    conflicts_resolved: int = Field(..., description="Conflicts resolved count")
+    week_savings_hours: float = Field(..., description="Savings in the last week")
+    version: str = Field(default="1.0.0", description="System version")

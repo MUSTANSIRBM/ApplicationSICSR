@@ -20,6 +20,8 @@ from app.adapters import (
     MockTMSAdapter, MockSMMSAdapter, MockTDMSAdapter, MockCOAAdapter
 )
 
+from app.core.models import ImpactMetrics, SystemStatusResponse, WeeklyTrendItem
+
 # Setup logger
 logger = logging.getLogger(__name__)
 
@@ -230,25 +232,26 @@ async def solve_schedule(
 
 @router.get("/plan")
 async def get_plan(
-        solve_id: Optional[UUID] = None,
-        session: Session = Depends(get_db)
+    solve_id: Optional[UUID] = None,
+    session: Session = Depends(get_db)
 ):
-    """Get the plan (timeline data)."""
+    """Get the plan (timeline data) with occupancy."""
     crud = CRUD(session)
 
+    start_date = datetime.now()
+    end_date = start_date + timedelta(days=28)
+
+    # Get blocks
     if solve_id:
         try:
             blocks = crud.get_blocks_by_solve(solve_id)
         except AttributeError:
-            blocks = crud.get_blocks(
-                datetime.now(),
-                datetime.now() + timedelta(days=28)
-            )
+            blocks = crud.get_blocks(start_date, end_date)
     else:
-        blocks = crud.get_blocks(
-            datetime.now(),
-            datetime.now() + timedelta(days=28)
-        )
+        blocks = crud.get_blocks(start_date, end_date)
+
+    # Get occupancy data (trains and goods)
+    occupancy = crud.get_trains_and_goods(start_date, end_date)
 
     return {
         "solve_id": str(solve_id) if solve_id else "latest",
@@ -268,13 +271,18 @@ async def get_plan(
                 "closure_minutes": block.duration_hours * 60,
                 "is_combined": block.is_combined,
                 "status": block.status.value if hasattr(block.status, 'value') else str(block.status),
-                "defect_source_refs": [str(d) for d in block.defect_ids]
+                "defect_source_refs": [str(d) for d in block.defect_ids],
+                # Add defect details
+                "defects": [
+                    crud.get_defect(d) for d in block.defect_ids
+                    if crud.get_defect(d) is not None
+                ]
             }
             for block in blocks
         ],
         "occupancy": {
-            "trains": [],
-            "goods": []
+            "trains": occupancy.get("trains", []),
+            "goods": occupancy.get("goods", [])
         }
     }
 
@@ -330,6 +338,7 @@ async def get_impact_metrics(
     hours_saved = baseline_hours - total_hours
     percent_improvement = (hours_saved / baseline_hours * 100) if baseline_hours > 0 else 0
 
+    # Count safety critical handled
     safety_critical_handled = 0
     for block in blocks:
         for defect_id in block.defect_ids:
@@ -337,6 +346,15 @@ async def get_impact_metrics(
             if defect and defect.safety_critical:
                 safety_critical_handled += 1
                 break
+
+    # NEW: Weekly trend data
+    weekly_trend = crud.get_weekly_trend(start_date)
+
+    # NEW: Defects by department
+    by_department = crud.get_defects_by_department()
+
+    # NEW: Cost savings (hours_saved * 20000 as example)
+    cost_savings = hours_saved * 20000
 
     return ImpactMetrics(
         total_closures_baseline=baseline_blocks,
@@ -348,7 +366,10 @@ async def get_impact_metrics(
         combined_blocks_count=combined_blocks,
         utilization_improvement=percent_improvement * 0.8 if percent_improvement > 0 else 0,
         deferred_count=0,
-        safety_critical_handled=safety_critical_handled
+        safety_critical_handled=safety_critical_handled,
+        weekly_trend=weekly_trend,
+        by_department=by_department,
+        cost_savings=cost_savings
     )
 
 
@@ -527,3 +548,143 @@ async def v1_handle_incident(
 ):
     """Legacy v1 endpoint - Handle real-time sensor incident."""
     return await handle_incident(request, session)
+
+
+@router.get("/status", response_model=SystemStatusResponse)
+async def get_system_status(
+        session: Session = Depends(get_db)
+):
+    """Get system status for top-bar metrics."""
+    crud = CRUD(session)
+
+    # Get all defects
+    defects = crud.get_all_defects()
+
+    # Get blocks from last 7 days
+    start_date = datetime.now() - timedelta(days=7)
+    blocks = crud.get_blocks(start_date, datetime.now())
+
+    # Calculate metrics
+    total_tasks = len(defects)
+    critical_waiting = crud.get_critical_waiting_count()
+    conflicts_resolved = crud.get_conflicts_resolved_count()
+
+    # Calculate weekly savings
+    total_hours = sum(b.duration_hours for b in blocks)
+    baseline_hours = total_hours * 1.4 if total_hours > 0 else 20
+    week_savings_hours = baseline_hours - total_hours
+
+    return SystemStatusResponse(
+        is_live=True,
+        last_solve_time_ms=20,  # Example value
+        total_tasks=total_tasks,
+        critical_waiting=critical_waiting,
+        conflicts_resolved=conflicts_resolved,
+        week_savings_hours=round(week_savings_hours, 1),
+        version="1.0.0"
+    )
+
+
+# ============================================================
+# NEW DEFECT MUTATION ENDPOINTS
+# ============================================================
+
+@router.patch("/defects/{defect_id}")
+async def update_defect(
+        defect_id: UUID,
+        status: Optional[str] = None,
+        deferral_reason: Optional[str] = None,
+        session: Session = Depends(get_db)
+):
+    """Update a defect's status and/or deferral reason."""
+    crud = CRUD(session)
+
+    # Get existing defect
+    existing = crud.get_defect(defect_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Defect not found")
+
+    # Update defect
+    updated = crud.update_defect(defect_id, status, deferral_reason)
+    if not updated:
+        raise HTTPException(status_code=500, detail="Failed to update defect")
+
+    return updated
+
+
+@router.delete("/defects/{defect_id}")
+async def delete_defect(
+        defect_id: UUID,
+        hard_delete: bool = Query(False, description="Set to True for hard delete, False for soft delete"),
+        session: Session = Depends(get_db)
+):
+    """Delete a defect (soft delete by default)."""
+    crud = CRUD(session)
+
+    existing = crud.get_defect(defect_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Defect not found")
+
+    success = crud.delete_defect(defect_id, soft_delete=not hard_delete)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to delete defect")
+
+    return {
+        "message": "Defect deleted successfully",
+        "success": True,
+        "soft_delete": not hard_delete
+    }
+
+
+# ============================================================
+# NEW BLOCK MUTATION ENDPOINT
+# ============================================================
+
+@router.patch("/blocks/{block_id}")
+async def update_block(
+        block_id: UUID,
+        status: str = Query(..., description="New status: APPROVED or LOCKED"),
+        session: Session = Depends(get_db)
+):
+    """Update a block's status (APPROVED or LOCKED)."""
+    crud = CRUD(session)
+
+    # Validate status
+    valid_statuses = ["APPROVED", "LOCKED"]
+    if status.upper() not in valid_statuses:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid status. Must be one of: {', '.join(valid_statuses)}"
+        )
+
+    # Get existing block
+    # Note: We need to implement get_block_by_id in CRUD
+    # For now, use existing method
+    blocks = crud.get_blocks(
+        datetime.now() - timedelta(days=30),
+        datetime.now() + timedelta(days=30)
+    )
+    existing = next((b for b in blocks if str(b.id) == str(block_id)), None)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Block not found")
+
+    # Update block
+    updated = crud.update_block_status(block_id, status.upper())
+    if not updated:
+        raise HTTPException(status_code=500, detail="Failed to update block")
+
+    return updated
+
+@router.get("/status")
+async def get_status():
+    """Get system status for frontend."""
+    return {
+        "status": "online",
+        "version": "1.0.0",
+        "timestamp": datetime.now().isoformat(),
+        "components": {
+            "database": "connected",
+            "api": "healthy",
+            "solver": "ready"
+        }
+    }

@@ -1,12 +1,14 @@
 # app/data/crud.py
-from sqlmodel import Session, select, and_
-from typing import List, Optional
-from datetime import datetime
+from sqlmodel import Session, select, and_, update
+from typing import List, Optional,Dict
+from datetime import datetime, timedelta
 from uuid import UUID
 from app.data.database import (
     DefectDB, CorridorDB, TimetableSlotDB,
     GoodsForecastDB, BlockDB
 )
+
+from app.core.models import Defect, Corridor, Block, DefectStatus, BlockStatus
 from app.core.models import Defect, Corridor, TimetableSlot, GoodsForecast, Block, Department, DefectStatus, BlockStatus
 
 
@@ -247,3 +249,150 @@ class CRUD:
             locked_at=db_block.locked_at,
             executed_at=db_block.executed_at
         )
+
+    def update_defect(self, defect_id: UUID, status: Optional[str] = None, deferral_reason: Optional[str] = None) -> \
+    Optional[Defect]:
+        """Update defect status and/or deferral reason."""
+        db_defect = self.session.get(DefectDB, defect_id)
+        if not db_defect:
+            return None
+
+        if status is not None:
+            # Validate status
+            valid_statuses = [s.value for s in DefectStatus]
+            if status.upper() in valid_statuses:
+                db_defect.status = status.upper()
+
+        if deferral_reason is not None:
+            db_defect.deferral_reason = deferral_reason
+
+        self.session.commit()
+        self.session.refresh(db_defect)
+        return self._defect_from_db(db_defect)
+
+    def delete_defect(self, defect_id: UUID, soft_delete: bool = True) -> bool:
+        """Delete or soft-delete a defect."""
+        db_defect = self.session.get(DefectDB, defect_id)
+        if not db_defect:
+            return False
+
+        if soft_delete:
+            # Soft delete - update status to something like "CANCELLED"
+            db_defect.status = "CANCELLED"
+            self.session.commit()
+        else:
+            # Hard delete
+            self.session.delete(db_defect)
+            self.session.commit()
+
+        return True
+
+    def update_block_status(self, block_id: UUID, status: str) -> Optional[Block]:
+        """Update block status (APPROVED, LOCKED, etc.)."""
+        db_block = self.session.get(BlockDB, block_id)
+        if not db_block:
+            return None
+
+        # Validate status
+        valid_statuses = [s.value for s in BlockStatus]
+        if status.upper() in valid_statuses:
+            db_block.status = status.upper()
+
+            if status.upper() == "LOCKED":
+                db_block.locked_at = datetime.now()
+
+        self.session.commit()
+        self.session.refresh(db_block)
+        return self._block_from_db(db_block)
+
+    def get_trains_and_goods(self, start_date: datetime, end_date: datetime) -> Dict[str, List[Dict]]:
+        """Get trains and goods for occupancy data."""
+        from app.data.database import TimetableSlotDB, GoodsForecastDB
+
+        # Get trains
+        trains = []
+        db_trains = self.session.exec(
+            select(TimetableSlotDB).where(
+                and_(
+                    TimetableSlotDB.start_time >= start_date,
+                    TimetableSlotDB.end_time <= end_date
+                )
+            )
+        ).all()
+
+        for t in db_trains:
+            trains.append({
+                "corridor_id": t.corridor_id,
+                "start_time": t.start_time.isoformat(),
+                "end_time": t.end_time.isoformat(),
+                "train_id": t.train_id
+            })
+
+        # Get goods
+        goods = []
+        db_goods = self.session.exec(
+            select(GoodsForecastDB).where(
+                and_(
+                    GoodsForecastDB.start_time >= start_date,
+                    GoodsForecastDB.end_time <= end_date
+                )
+            )
+        ).all()
+
+        for g in db_goods:
+            goods.append({
+                "corridor_id": g.corridor_id,
+                "start_time": g.start_time.isoformat(),
+                "end_time": g.end_time.isoformat(),
+                "train_id": g.train_id
+            })
+
+        return {"trains": trains, "goods": goods}
+
+    def get_weekly_trend(self, start_date: datetime) -> List[Dict]:
+        """Get weekly trend data for impact dashboard."""
+        # Get blocks from the week
+        end_date = start_date + timedelta(days=7)
+        blocks = self.get_blocks(start_date, end_date)
+
+        # Group by day
+        days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        result = []
+
+        for i, day in enumerate(days):
+            day_date = start_date + timedelta(days=i)
+            day_blocks = [b for b in blocks if b.start_time.date() == day_date.date()]
+
+            result.append({
+                "day": day,
+                "planned": len(day_blocks),
+                "actual": len(day_blocks)  # In real system, could be different
+            })
+
+        return result
+
+    def get_defects_by_department(self) -> Dict[str, int]:
+        """Get defect counts by department."""
+        defects = self.get_all_defects()
+        result = {}
+        for defect in defects:
+            dept = defect.department.value if hasattr(defect.department, 'value') else str(defect.department)
+            result[dept.lower()] = result.get(dept.lower(), 0) + 1
+        return result
+
+    def get_critical_waiting_count(self) -> int:
+        """Get count of critical defects waiting."""
+        defects = self.get_all_defects()
+        return len([
+            d for d in defects
+            if d.safety_critical and str(d.status).upper() in ["NEW", "SCORED"]
+        ])
+
+    def get_conflicts_resolved_count(self) -> int:
+        """Get count of conflicts resolved (blocks that resolved conflicts)."""
+        blocks = self.get_blocks(
+            datetime.now() - timedelta(days=7),
+            datetime.now()
+        )
+        # Count combined blocks as resolved conflicts
+        return sum(1 for b in blocks if b.is_combined)
