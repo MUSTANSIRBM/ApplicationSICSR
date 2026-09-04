@@ -1,44 +1,34 @@
 """
 ml_sensor/decide.py -- the LIVE decision engine.
 
-Step 3 of 7. This is the piece that runs in seconds when a train is
-closing on an obstruction. Locked decision 9 is the whole design:
+Step 3 of 7. Locked decision 9 is the whole design:
 
   R1 (hard rule): severity >= 9 AND cannot stop AND no alternate route
-      -> emergency_stop. The MODEL IS NEVER CONSULTED. Physics owns
-      the black zones.
-  R2 (confidence leash): model confidence < 0.55 -> rule-engine answer
-      instead. ML owns the gray zones, on a leash.
+      -> emergency_stop. The MODEL IS NEVER CONSULTED.
+  R2 (confidence leash): model confidence < 0.55 -> rule-engine answer.
 
-Order of operations matters more than anything else in this file:
-  normalize -> physics -> R1 (before the model) -> model -> R2 ->
-  assemble. If the R2 check ever runs before R1, the model could see
-  a catastrophic case -- R1 is a wall, not a suggestion.
+Order of operations: normalize -> physics -> R1 (before the model) ->
+model -> R2 -> assemble. R1 is a wall, not a suggestion.
 
-Serving discipline:
-  - the feature matrix is rebuilt FROM THE BUNDLE (column order, code
-    maps, weather multipliers, imputer, confidence floor) -- never
-    from memory. train/serve drift is structurally impossible here.
-  - this module loads the joblib file directly; it NEVER imports
-    train.py, so the live path drags in zero training machinery.
-  - predictions decode through the model's own classes_ order --
-    predict_proba columns are never assumed alphabetical or
-    index-ordered.
-  - if the model raises or the bundle is missing, the engine degrades
-    to the rule engine (source: rule_fallback) with the failure in
-    the reasons. A live safety component fails LOUD and SAFE, never
-    silent.
+v2 -- SPEED ADVISORY: display-only recommended speed on reduce_speed
+  (physics + severity based; never a model feature; vocabulary stays 4).
 
-Output contract (what the API returns, what the frontend renders --
-locked decision 12: frontend displays physics, never sends it back):
-  action, confidence, source, reasons (data structure, rendered never
-  recomputed), physics block, probabilities, decision_latency_ms.
+v3 -- EVIDENCE (owner request): model-source decisions now carry an
+  'evidence' block -- the input's feature values compared against the
+  class-conditional stats of the predicted action vs the runner-up,
+  over the model's own top-important features. Built by
+  ml_sensor/explain.py from the seeded dataset, cached, artifact-
+  persisted. Microseconds per request (stats are precomputed).
+  hard_rule: evidence is None (no model to explain). rule_fallback:
+  evidence is None (the reasons already tell that story).
 
-Run:  python -m ml_sensor.decide   -> runs the demo anchor, prints JSON
+Serving discipline: matrix rebuilt FROM THE BUNDLE, predictions decode
+through classes_, missing/corrupt model degrades LOUD and SAFE.
+
+Run:  python -m ml_sensor.decide
 
 Layer rules: pure Python + joblib + numpy + pandas. No fastapi, no
-sqlmodel. Unknown weather/type/sensor raises ValueError; the API layer
-turns that into a 422 -- never a silent guess.
+sqlmodel.
 """
 
 from __future__ import annotations
@@ -51,66 +41,100 @@ import joblib
 import numpy as np
 import pandas as pd
 
-from ml_sensor.scenarios import (ACTIONS, DEMO_ANCHOR, OBSTRUCTION_TYPES,
+from ml_sensor.explain import explain_decision, get_stats
+from ml_sensor.scenarios import (DEMO_ANCHOR, OBSTRUCTION_TYPES,
                                   SENSOR_TYPES, normalize_weather,
-                                  physics_block, rule_engine_action,
-                                  safe_stopping_possible)
+                                  physics_block, rule_engine_action)
 
 BUNDLE_PATH = Path("ml_sensor/model/decision_model.joblib")
 
-# Sources, in escalation-of-authority order. Exactly three -- this is
-# the "source" field of every decision.
-SOURCE_HARD_RULE = "hard_rule"          # R1: physics decided
-SOURCE_MODEL = "model"                  # gray zone, confident
-SOURCE_RULE_FALLBACK = "rule_fallback"  # R2 low confidence, or model failure
+SOURCE_HARD_RULE = "hard_rule"
+SOURCE_MODEL = "model"
+SOURCE_RULE_FALLBACK = "rule_fallback"
 
-# Sub-100ms is a design requirement, not a hope. This budget only
-# measures engine time (validation to answer); network/serialization
-# belong to the API layer, and the API reports its own number.
 DECISION_BUDGET_MS = 100.0
+
+# --- v2: speed advisory constants (owner-tunable, display-only) ---
+ADVISORY_MIN_KMH = 25.0
+ADVISORY_COMFORT_FRACTION = 0.5
+ADVISORY_SEV_FACTOR_MILD = 0.75    # severity <= 6
+ADVISORY_SEV_FACTOR_SEVERE = 0.60  # severity 7-8
+
+
+def speed_advisory(sc: dict, physics: dict) -> dict:
+    """DISPLAY-ONLY recommended speed for reduce_speed decisions.
+    Two factors, most conservative wins; see module docstring (v2)."""
+    speed = float(sc["train_speed_kmh"])
+    weather = str(sc["environmental_condition"])
+    mult = physics["weather_braking_multiplier"]
+    eff = float(physics["effective_distance_km"])
+    sev = int(sc["severity_score"])
+
+    budget = ADVISORY_COMFORT_FRACTION * eff
+    comfort = (100.0 * (budget / (2.0 * mult)) ** 0.5
+               if budget > 0 else 0.0)
+
+    sev_factor = (ADVISORY_SEV_FACTOR_MILD if sev <= 6
+                  else ADVISORY_SEV_FACTOR_SEVERE)
+    severity_cap = speed * sev_factor
+
+    target = min(comfort, severity_cap, speed)
+    target = int(target / 5.0) * 5
+
+    if target < ADVISORY_MIN_KMH:
+        return {
+            "recommended_speed_kmh": None,
+            "basis": (f"no safe crawl speed above "
+                      f"{ADVISORY_MIN_KMH:.0f} km/h -- treat as "
+                      "stop-worthy"),
+        }
+    return {
+        "recommended_speed_kmh": target,
+        "basis": (f"braking at {target} km/h uses at most "
+                  f"{int(ADVISORY_COMFORT_FRACTION * 100)}% of the "
+                  f"remaining {eff:.2f} km (sensor-error headroom); "
+                  f"severity {sev}/10 caps prudence at "
+                  f"{int(sev_factor * 100)}% of current speed"),
+    }
 
 
 class DecisionEngine:
-    """Stateless, thread-safe decision engine. One instance can serve
-    many requests (the planner API runs the same pattern)."""
+    """Stateless, thread-safe decision engine."""
 
     def __init__(self, bundle_path: Path | str = BUNDLE_PATH,
                  bundle: dict | None = None,
                  model=None):
-        """bundle: pre-loaded bundle (tests). model: an object with
-        .predict / .predict_proba (tests use a spy to prove R1 never
-        consults the model). Both None -> load from disk."""
         if bundle is not None:
             self.bundle = bundle
         else:
             path = Path(bundle_path)
             if not path.exists():
-                # Missing model is a boot problem, not a request
-                # problem: raise loudly. api/main.py self-heals by
-                # training; this module never trains on its own.
                 raise FileNotFoundError(
                     f"no trained model at {path} -- run: "
                     f"python -m ml_sensor.train"
                 )
             self.bundle = joblib.load(path)
-        # The live model. Injected spy overrides the bundled one
-        # WITHOUT touching the rest of the contract (imputer, floors,
-        # code maps stay real) -- that is what makes the R1 test an
-        # honest spy rather than a strawman.
         self.model = model if model is not None else self.bundle["model"]
         self.feature_columns: list[str] = list(self.bundle["feature_columns"])
         self.confidence_floor: float = float(self.bundle["confidence_floor"])
         self.actions: list[str] = list(self.bundle["actions"])
+        # v3: the model's own top-important features drive the evidence
+        # panel (its attention, not our guesses).
+        imps = (self.bundle.get("test_metrics", {})
+                .get("importances") or [])
+        self.evidence_features = [i["feature"] for i in imps
+                                  if i["feature"] in self.feature_columns][:6]
+        # v3: warm the evidence stats at construction (boot time), so
+        # the first live decision never pays the build cost. A stats
+        # failure must NEVER break decisions -- evidence is optional.
+        try:
+            get_stats()
+        except Exception:  # noqa: BLE001
+            pass
 
-    # -----------------------------------------------------------------
-    # Validation + normalization at the boundary
-    # -----------------------------------------------------------------
+    # -- validation + normalization at the boundary ----------------
 
     def _validate(self, incident: dict) -> dict:
-        """Strict boundary checks. Returns a NORMALIZED copy: weather
-        'dry' -> 'clear' (locked), everything else must already be in
-        vocabulary or we raise. Unknown obstruction type / sensor /
-        weather is a 422 upstream -- we never guess."""
         sc = dict(incident)
         weather = normalize_weather(str(sc["environmental_condition"]))
         if weather is None:
@@ -131,15 +155,9 @@ class DecisionEngine:
         sc["ahead_section_status"] = str(sc["ahead_section_status"]).upper()
         return sc
 
-    # -----------------------------------------------------------------
-    # Feature matrix: rebuilt FROM THE BUNDLE, never from memory
-    # -----------------------------------------------------------------
+    # -- feature matrix from the bundle (v3: also returns values) ----
 
-    def _feature_row(self, sc: dict) -> pd.DataFrame:
-        """One scenario -> 1x16 float DataFrame in the bundle's column
-        order, using the bundle's code maps and weather multipliers.
-        If scenarios.py constants ever drift from a trained bundle, the
-        bundle wins -- the artifact is the contract."""
+    def _feature_row(self, sc: dict) -> tuple[pd.DataFrame, dict]:
         weather = str(sc["environmental_condition"])
         typ = str(sc["obstruction_type"])
         sensor = str(sc["sensor_type"])
@@ -173,33 +191,23 @@ class DecisionEngine:
         }
         X = pd.DataFrame([values], columns=self.feature_columns)
         X = X.apply(pd.to_numeric, errors="raise").astype(float)
-        return X
+        return X, values
 
-    # -----------------------------------------------------------------
-    # The decision
-    # -----------------------------------------------------------------
+    # -- the decision ------------------------------------------------
 
     def decide(self, incident: dict) -> dict:
-        """Incident in -> full decision out. Raises ValueError on junk
-        input (API -> 422). Everything else degrades safely."""
         t0 = time.perf_counter()
 
-        # 1) boundary: normalize + strict validation
         sc = self._validate(incident)
-
-        # 2) physics block (display + R1 inputs). Computed here, shown
-        #    to the frontend, NEVER fed back as a model feature.
         physics = physics_block(sc)
 
-        # 3) R1 -- the wall. Model never consulted past this point if
-        #    it fires. (severity>=9 AND can't stop AND no alternate.)
         r1_fires = (
             int(sc["severity_score"]) >= 9
             and not physics["safe_stopping_possible"]
             and not bool(sc.get("alternative_route_available"))
         )
         if r1_fires:
-            result = self._assemble(
+            return self._assemble(
                 sc, physics,
                 action="emergency_stop",
                 confidence=1.0,
@@ -218,29 +226,23 @@ class DecisionEngine:
                 ],
                 t0=t0,
             )
-            return result
 
-        # 4) the model, on the bundle's terms
         try:
-            X = self._feature_row(sc)
+            X, values = self._feature_row(sc)
             X_i = self.bundle["imputer"].transform(X)
             codes = self.model.predict(X_i)
             action_code = int(np.asarray(codes).ravel()[0])
             action = self.actions[action_code]
 
-            # decode predict_proba THROUGH classes_ -- never assume the
-            # column order. classes_ holds codes; column i is the
-            # probability of classes_[i].
             proba = np.asarray(self.model.predict_proba(X_i)).ravel()
             classes = list(np.asarray(self.model.classes_).ravel())
             probs = {self.actions[int(c)]: float(p)
                      for c, p in zip(classes, proba)}
             confidence = float(probs[action])
 
-            # 5) R2 -- the leash: low confidence -> rule engine answers
             if confidence < self.confidence_floor:
                 rule_action = rule_engine_action(sc)
-                result = self._assemble(
+                return self._assemble(
                     sc, physics,
                     action=rule_action,
                     confidence=round(confidence, 4),
@@ -256,10 +258,20 @@ class DecisionEngine:
                     ],
                     t0=t0,
                 )
-                return result
 
-            # 6) the model owns it
-            result = self._assemble(
+            # v3: numeric evidence -- only the model's own answer gets
+            # explained with numbers; failures here must never break
+            # the decision.
+            evidence = None
+            try:
+                evidence = explain_decision(
+                    values, action,
+                    {a: round(p, 4) for a, p in probs.items()},
+                    self.evidence_features)
+            except Exception:  # noqa: BLE001
+                evidence = None
+
+            return self._assemble(
                 sc, physics,
                 action=action,
                 confidence=round(confidence, 4),
@@ -280,15 +292,12 @@ class DecisionEngine:
                     "model is licensed to decide).",
                 ],
                 t0=t0,
+                evidence=evidence,
             )
-            return result
 
         except Exception as exc:  # noqa: BLE001
-            # Model failure degrades LOUD and SAFE: rule engine answers,
-            # the failure is in the reasons, the source says what
-            # happened. A live safety path never fails silent.
             rule_action = rule_engine_action(sc)
-            result = self._assemble(
+            return self._assemble(
                 sc, physics,
                 action=rule_action,
                 confidence=None,
@@ -302,32 +311,43 @@ class DecisionEngine:
                 ],
                 t0=t0,
             )
-            return result
 
-    # -----------------------------------------------------------------
-    # Output assembly
-    # -----------------------------------------------------------------
+    # -- output assembly (v2 advisory + v3 evidence) ------------------
 
     def _assemble(self, sc: dict, physics: dict, action: str,
                   confidence: float | None, source: str,
                   probabilities: dict | None, reasons: list[str],
-                  t0: float) -> dict:
+                  t0: float, evidence: dict | None = None) -> dict:
+        if action == "reduce_speed":
+            adv = speed_advisory(sc, physics)
+            physics = {**physics, "speed_advisory": adv}
+            if adv["recommended_speed_kmh"] is not None:
+                reasons = reasons + [
+                    f"Speed advisory: reduce to "
+                    f"{adv['recommended_speed_kmh']} km/h "
+                    f"(display-only, physics + severity based)."
+                ]
+            else:
+                reasons = reasons + [
+                    "Speed advisory: " + adv["basis"],
+                ]
+
         latency_ms = round((time.perf_counter() - t0) * 1000.0, 2)
-        out = {
+        return {
             "action": action,
             "confidence": confidence,
             "source": source,
             "reasons": reasons,
             "physics": physics,
             "probabilities": probabilities,
+            "evidence": evidence,
             "decision_latency_ms": latency_ms,
             "within_100ms_budget": latency_ms < DECISION_BUDGET_MS,
         }
-        return out
 
 
 # =====================================================================
-# CLI -- the demo anchor, printed as the full decision JSON
+# CLI
 # =====================================================================
 
 def main() -> None:
@@ -337,18 +357,11 @@ def main() -> None:
           f"confidence floor: {engine.confidence_floor} | "
           f"features: {len(engine.feature_columns)}")
     decision = engine.decide(DEMO_ANCHOR)
-    print("\nInput (DEMO_ANCHOR):")
-    print(json.dumps(DEMO_ANCHOR, indent=2))
-    print("\nDecision:")
+    print("\nDecision (watch evidence + reasons):")
     print(json.dumps(decision, indent=2))
-
-    # invariant check: the anchor must land emergency_stop
     ok = decision["action"] == "emergency_stop"
     print(f"\nanchor invariant (action == emergency_stop): "
           f"{'PASS' if ok else 'FAIL'}")
-    if decision["source"] == SOURCE_MODEL:
-        print("note: anchor ran THROUGH the model (gray zone rung 2) -- "
-              "the model earned this answer, R1 did not hand it one.")
 
 
 if __name__ == "__main__":

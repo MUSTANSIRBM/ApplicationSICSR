@@ -1,0 +1,342 @@
+{
+  "features": [
+    "train_speed_kmh",
+    "distance_to_obstacle_km",
+    "time_to_obstacle_min",
+    "environmental_braking_multiplier",
+    "weather_alert",
+    "signal_quality_percent",
+    "severity_score",
+    "obstruction_type_code",
+    "alternative_route_available",
+    "communication_latency_ms",
+    "axle_balance",
+    "axle_balance_missing",
+    "ahead_section_occupied",
+    "known_train_schedule",
+    "distance_from_station_km",
+    "sensor_type_code"
+  ],
+  "per_action": {
+    "proceed_with_caution": {
+      "n": 1120,
+      "features": {
+        "train_speed_kmh": {
+          "kind": "num",
+          "mean": 115.53,
+          "std": 43.58
+        },
+        "distance_to_obstacle_km": {
+          "kind": "num",
+          "mean": 11.38,
+          "std": 4.99
+        },
+        "time_to_obstacle_min": {
+          "kind": "num",
+          "mean": 6.72,
+          "std": 4.18
+        },
+        "environmental_braking_multiplier": {
+          "kind": "num",
+          "mean": 1.16,
+          "std": 0.25
+        },
+        "weather_alert": {
+          "kind": "bool",
+          "share": 0.032
+        },
+        "signal_quality_percent": {
+          "kind": "num",
+          "mean": 78.32,
+          "std": 13.97
+        },
+        "severity_score": {
+          "kind": "num",
+          "mean": 3.07,
+          "std": 1.78
+        },
+        "obstruction_type_code": {
+          "kind": "code",
+          "top": "cattle_crossing",
+          "share": 0.363
+        },
+        "alternative_route_available": {
+          "kind": "bool",
+          "share": 0.44
+        },
+        "communication_latency_ms": {
+          "kind": "num",
+          "mean": 1029.25,
+          "std": 572.34
+        },
+        "axle_balance": {
+          "kind": "num",
+          "mean": 1.0,
+          "std": 0.06
+        },
+        "axle_balance_missing": {
+          "kind": "bool",
+          "share": 0.334
+        },
+        "ahead_section_occupied": {
+          "kind": "bool",
+          "share": 0.297
+        },
+        "known_train_schedule": {
+          "kind": "bool",
+          "share": 0.754
+        },
+        "distance_from_station_km": {
+          "kind": "num",
+          "mean": 12.51,
+          "std": 6.91
+        },
+        "sensor_type_code": {
+          "kind": "code",
+          "top": "track_circuit",
+          "share": 0.389
+        }
+      }
+    },
+    "reduce_speed": {
+      "n": 4972,
+      "features": {
+        "train_speed_kmh": {
+          "kind": "num",
+          "mean": 115.39,
+          "std": 43.6
+        },
+        "distance_to_obstacle_km": {
+          "kind": "num",
+          "mean": 11.99,
+          "std": 4.88
+        },
+        "time_to_obstacle_min": {
+          "kind": "num",
+          "mean": 7.09,
+          "std": 4.24
+        },
+        "environmental_braking_multiplier": {
+          "kind": "num",
+          "mean": 1.23,
+          "std": 0.29
+        },
+        "weather_alert": {
+          "kind": "bool",
+          "share": 0.26
+        },
+        "signal_quality_percent": {
+          "kind": "num",
+          "mean": 62.39,
+          "std": 20.28
+        },
+        "severity_score": {
+          "kind": "num",
+          "mean": 5.33,
+          "std": 2.07
+        },
+        "obstruction_type_code": {
+          "kind": "code",
+          "top": "fallen_tree",
+          "share": 0.137
+        },
+        "alternative_route_available": {
+          "kind": "bool",
+          "share": 0.407
+        },
+        "communication_latency_ms": {
+          "kind": "num",
+          "mean": 1023.27,
+          "std": 565.83
+        },
+        "axle_balance": {
+          "kind": "num",
+          "mean": 1.0,
+          "std": 0.06
+        },
+        "axle_balance_missing": {
+          "kind": "bool",
+          "share": 0.354
+        },
+        "ahead_section_occupied": {
+          "kind": "bool",
+          "share": 0.293
+        },
+        "known_train_schedule": {
+          "kind": "bool",
+          "share": 0.757
+        },
+        "distance_from_station_km": {
+          "kind": "num",
+          "mean": 12.91,
+          "std": 7.08
+        },
+        "sensor_type_code": {
+          "kind": "code",
+          "top": "track_circuit",
+          "share": 0.388
+        }
+      }
+    },
+    "reroute": {
+      "n": 1420,
+      "features": {
+        "train_speed_kmh": {
+          "kind": "num",
+          "mean": 138.55,
+          "std": 42.97
+        },
+        "distance_to_obstacle_km": {
+          "kind": "num",
+          "mean": 6.34,
+          "std": 5.46
+        },
+        "time_to_obstacle_min": {
+          "kind": "num",
+          "mean": 3.3,
+          "std": 3.77
+        },
+        "environmental_braking_multiplier": {
+          "kind": "num",
+          "mean": 1.28,
+          "std": 0.31
+        },
+        "weather_alert": {
+          "kind": "bool",
+          "share": 0.257
+        },
+        "signal_quality_percent": {
+          "kind": "num",
+          "mean": 64.95,
+          "std": 20.23
+        },
+        "severity_score": {
+          "kind": "num",
+          "mean": 6.22,
+          "std": 2.32
+        },
+        "obstruction_type_code": {
+          "kind": "code",
+          "top": "landslide_debris",
+          "share": 0.172
+        },
+        "alternative_route_available": {
+          "kind": "bool",
+          "share": 0.947
+        },
+        "communication_latency_ms": {
+          "kind": "num",
+          "mean": 1030.83,
+          "std": 553.29
+        },
+        "axle_balance": {
+          "kind": "num",
+          "mean": 1.0,
+          "std": 0.06
+        },
+        "axle_balance_missing": {
+          "kind": "bool",
+          "share": 0.365
+        },
+        "ahead_section_occupied": {
+          "kind": "bool",
+          "share": 0.312
+        },
+        "known_train_schedule": {
+          "kind": "bool",
+          "share": 0.746
+        },
+        "distance_from_station_km": {
+          "kind": "num",
+          "mean": 12.75,
+          "std": 7.02
+        },
+        "sensor_type_code": {
+          "kind": "code",
+          "top": "track_circuit",
+          "share": 0.412
+        }
+      }
+    },
+    "emergency_stop": {
+      "n": 2488,
+      "features": {
+        "train_speed_kmh": {
+          "kind": "num",
+          "mean": 131.73,
+          "std": 45.08
+        },
+        "distance_to_obstacle_km": {
+          "kind": "num",
+          "mean": 7.92,
+          "std": 5.84
+        },
+        "time_to_obstacle_min": {
+          "kind": "num",
+          "mean": 4.37,
+          "std": 4.3
+        },
+        "environmental_braking_multiplier": {
+          "kind": "num",
+          "mean": 1.26,
+          "std": 0.31
+        },
+        "weather_alert": {
+          "kind": "bool",
+          "share": 0.246
+        },
+        "signal_quality_percent": {
+          "kind": "num",
+          "mean": 65.08,
+          "std": 20.15
+        },
+        "severity_score": {
+          "kind": "num",
+          "mean": 7.43,
+          "std": 2.58
+        },
+        "obstruction_type_code": {
+          "kind": "code",
+          "top": "landslide_debris",
+          "share": 0.194
+        },
+        "alternative_route_available": {
+          "kind": "bool",
+          "share": 0.238
+        },
+        "communication_latency_ms": {
+          "kind": "num",
+          "mean": 1026.96,
+          "std": 554.88
+        },
+        "axle_balance": {
+          "kind": "num",
+          "mean": 1.0,
+          "std": 0.06
+        },
+        "axle_balance_missing": {
+          "kind": "bool",
+          "share": 0.358
+        },
+        "ahead_section_occupied": {
+          "kind": "bool",
+          "share": 0.284
+        },
+        "known_train_schedule": {
+          "kind": "bool",
+          "share": 0.749
+        },
+        "distance_from_station_km": {
+          "kind": "num",
+          "mean": 12.63,
+          "std": 6.98
+        },
+        "sensor_type_code": {
+          "kind": "code",
+          "top": "track_circuit",
+          "share": 0.398
+        }
+      }
+    }
+  }
+}

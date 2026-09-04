@@ -45,7 +45,7 @@ from ml_sensor.scenarios import (FEATURE_COLUMNS, RAW_FIELD_ORDER,
 EVAL_JSON_PATH = Path("ml_sensor/eval_scenarios.json")   # owner's real data
 REPORT_PATH = Path("ml_sensor/model/eval_report.json")
 TARGET_AGREEMENT = 7          # of 10 -- locked target
-N_TRAIN_ROWS = 4000
+from ml_sensor.scenarios import N_SCENARIOS as N_TRAIN_ROWS
 
 # =====================================================================
 # DRAFT scenarios (stand-ins -- owner swaps via eval_scenarios.json)

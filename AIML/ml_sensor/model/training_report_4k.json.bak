@@ -1,39 +1,39 @@
 {
   "trained_at_seed": 42,
   "split": {
-    "train": 8000,
-    "test": 2000,
+    "train": 3200,
+    "test": 800,
     "test_size": 0.2,
     "split_seed": 42,
     "stratified": true
   },
   "label_noise_fraction": 0.04,
   "class_balance_train": {
-    "proceed_with_caution": 896,
-    "reduce_speed": 3978,
-    "reroute": 1136,
-    "emergency_stop": 1990
+    "proceed_with_caution": 359,
+    "reduce_speed": 1605,
+    "reroute": 458,
+    "emergency_stop": 778
   },
   "models": {
     "random_forest": {
-      "macro_f1": 0.8959,
-      "accuracy": 0.913,
+      "macro_f1": 0.8867,
+      "accuracy": 0.905,
       "per_class": {
         "proceed_with_caution": {
-          "f1": 0.8864,
-          "support": 224
+          "f1": 0.8889,
+          "support": 90
         },
         "reduce_speed": {
-          "f1": 0.9312,
-          "support": 994
+          "f1": 0.9346,
+          "support": 401
         },
         "reroute": {
-          "f1": 0.838,
-          "support": 284
+          "f1": 0.8311,
+          "support": 115
         },
         "emergency_stop": {
-          "f1": 0.9282,
-          "support": 498
+          "f1": 0.8923,
+          "support": 194
         }
       },
       "confusion_matrix": {
@@ -45,117 +45,117 @@
         ],
         "matrix": [
           [
-            195,
-            18,
-            2,
-            9
+            80,
+            3,
+            3,
+            4
           ],
           [
-            16,
-            947,
-            19,
-            12
-          ],
-          [
-            1,
-            47,
-            225,
+            6,
+            379,
+            5,
             11
           ],
           [
-            4,
-            28,
-            7,
-            459
+            2,
+            15,
+            91,
+            7
+          ],
+          [
+            2,
+            13,
+            5,
+            174
           ]
         ]
       },
       "importances": [
         {
           "feature": "severity_score",
-          "importance": 0.273
+          "importance": 0.2783
         },
         {
           "feature": "time_to_obstacle_min",
-          "importance": 0.1602
+          "importance": 0.1535
         },
         {
           "feature": "alternative_route_available",
-          "importance": 0.1146
-        },
-        {
-          "feature": "obstruction_type_code",
-          "importance": 0.0903
+          "importance": 0.1085
         },
         {
           "feature": "distance_to_obstacle_km",
-          "importance": 0.0863
+          "importance": 0.0865
+        },
+        {
+          "feature": "obstruction_type_code",
+          "importance": 0.086
         },
         {
           "feature": "signal_quality_percent",
-          "importance": 0.0816
+          "importance": 0.0793
         },
         {
           "feature": "train_speed_kmh",
-          "importance": 0.0524
-        },
-        {
-          "feature": "weather_alert",
-          "importance": 0.0306
+          "importance": 0.0564
         },
         {
           "feature": "distance_from_station_km",
-          "importance": 0.0249
+          "importance": 0.0308
+        },
+        {
+          "feature": "weather_alert",
+          "importance": 0.0285
         },
         {
           "feature": "communication_latency_ms",
-          "importance": 0.0245
+          "importance": 0.0282
         },
         {
           "feature": "axle_balance",
-          "importance": 0.0233
+          "importance": 0.0243
         },
         {
           "feature": "environmental_braking_multiplier",
-          "importance": 0.0194
+          "importance": 0.0185
         },
         {
           "feature": "sensor_type_code",
-          "importance": 0.0089
-        },
-        {
-          "feature": "ahead_section_occupied",
-          "importance": 0.0034
+          "importance": 0.0094
         },
         {
           "feature": "axle_balance_missing",
-          "importance": 0.0033
+          "importance": 0.0043
+        },
+        {
+          "feature": "ahead_section_occupied",
+          "importance": 0.0039
         },
         {
           "feature": "known_train_schedule",
-          "importance": 0.0032
+          "importance": 0.0036
         }
       ]
     },
     "xgboost": {
-      "macro_f1": 0.933,
-      "accuracy": 0.9455,
+      "macro_f1": 0.9012,
+      "accuracy": 0.915,
       "per_class": {
         "proceed_with_caution": {
-          "f1": 0.9227,
-          "support": 224
+          "f1": 0.905,
+          "support": 90
         },
         "reduce_speed": {
-          "f1": 0.9612,
-          "support": 994
+          "f1": 0.942,
+          "support": 401
         },
         "reroute": {
-          "f1": 0.8963,
-          "support": 284
+          "f1": 0.8673,
+          "support": 115
         },
         "emergency_stop": {
-          "f1": 0.9516,
-          "support": 498
+          "f1": 0.8906,
+          "support": 194
         }
       },
       "confusion_matrix": {
@@ -167,110 +167,110 @@
         ],
         "matrix": [
           [
-            197,
-            17,
+            81,
             3,
-            7
+            3,
+            3
           ],
           [
             3,
-            967,
-            20,
-            4
-          ],
-          [
-            0,
-            18,
-            255,
+            382,
+            5,
             11
           ],
           [
+            2,
+            10,
+            98,
+            5
+          ],
+          [
             3,
-            16,
-            7,
-            472
+            15,
+            5,
+            171
           ]
         ]
       },
       "importances": [
         {
           "feature": "alternative_route_available",
-          "importance": 0.2747
+          "importance": 0.2403
         },
         {
           "feature": "severity_score",
-          "importance": 0.1975
+          "importance": 0.2101
         },
         {
           "feature": "weather_alert",
-          "importance": 0.1812
+          "importance": 0.1931
         },
         {
           "feature": "time_to_obstacle_min",
-          "importance": 0.1022
+          "importance": 0.1035
         },
         {
           "feature": "obstruction_type_code",
-          "importance": 0.0606
+          "importance": 0.0529
         },
         {
           "feature": "signal_quality_percent",
-          "importance": 0.0321
+          "importance": 0.0365
         },
         {
           "feature": "environmental_braking_multiplier",
-          "importance": 0.0295
+          "importance": 0.03
         },
         {
           "feature": "train_speed_kmh",
-          "importance": 0.0238
-        },
-        {
-          "feature": "sensor_type_code",
-          "importance": 0.0203
-        },
-        {
-          "feature": "axle_balance",
-          "importance": 0.0129
+          "importance": 0.0263
         },
         {
           "feature": "ahead_section_occupied",
-          "importance": 0.0116
+          "importance": 0.0158
         },
         {
           "feature": "distance_from_station_km",
-          "importance": 0.0115
+          "importance": 0.0147
         },
         {
-          "feature": "communication_latency_ms",
-          "importance": 0.0114
+          "feature": "axle_balance",
+          "importance": 0.0147
         },
         {
           "feature": "distance_to_obstacle_km",
-          "importance": 0.011
+          "importance": 0.0144
+        },
+        {
+          "feature": "sensor_type_code",
+          "importance": 0.0144
+        },
+        {
+          "feature": "communication_latency_ms",
+          "importance": 0.0121
+        },
+        {
+          "feature": "axle_balance_missing",
+          "importance": 0.0105
         },
         {
           "feature": "known_train_schedule",
           "importance": 0.0105
-        },
-        {
-          "feature": "axle_balance_missing",
-          "importance": 0.009
         }
       ]
     }
   },
   "winner": "xgboost",
-  "winner_test_macro_f1": 0.933,
+  "winner_test_macro_f1": 0.9012,
   "expected_f1_band": [
     0.9,
     0.96
   ],
   "r2_fallback_preview": {
     "confidence_floor": 0.55,
-    "test_fallback_rate": 0.0055,
+    "test_fallback_rate": 0.0125,
     "note": "tree ensembles are near-categorical here; low-confidence fallback firing rarely is HONEST, not a bug. The rate is reported, never hidden."
   },
   "bundle_path": "ml_sensor/model/decision_model.joblib",
-  "elapsed_seconds": 11.44
+  "elapsed_seconds": 9.39
 }

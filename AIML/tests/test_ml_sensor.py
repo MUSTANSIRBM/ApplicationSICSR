@@ -381,3 +381,98 @@ def test_bridge_creates_defect_and_departments(fresh_db):
         assert trd_dept.code == DepartmentCode.TRD
     finally:
         session_gen.close()
+
+# =====================================================================
+# 9) Speed advisory (v2): display-only, only on reduce_speed
+# =====================================================================
+
+def test_speed_advisory_on_reduce_only():
+    from ml_sensor.decide import DecisionEngine
+    from ml_sensor.scenarios import DEMO_ANCHOR
+    
+    engine = DecisionEngine()
+
+    # a reduce_speed scenario (80 km/h, clear, fallen_tree, sev 5)
+    reduce_sc = {
+        "train_speed_kmh": 80.0,
+        "distance_to_obstacle_km": 2.5,
+        "environmental_condition": "clear",
+        "weather_alert": False,
+        "signal_quality_percent": 70.0,
+        "severity_score": 5,
+        "obstruction_type": "fallen_tree",
+        "alternative_route_available": False,
+        "communication_latency_ms": 500,
+        "axle_balance": None,
+        "ahead_section_status": "CLEAR",
+        "known_train_schedule": True,
+        "distance_from_station_km": 6.0,
+        "sensor_type": "track_circuit",
+    }
+    d = engine.decide(reduce_sc)
+    assert d["action"] == "reduce_speed"
+    adv = d["physics"]["speed_advisory"]
+    v = adv["recommended_speed_kmh"]
+    assert v is not None
+    assert v <= reduce_sc["train_speed_kmh"], "never advise speeding UP"
+    assert v % 5 == 0, "railway speeds are multiples of 5"
+    assert v >= 25, "below 25 km/h is not a crawl, it is a stop"
+    assert any("Speed advisory" in r for r in d["reasons"])
+
+    # formula spot-check: sev 5 -> 75% cap = 60; comfort is higher ->
+    # advisory must be the severity cap, rounded down to 5
+    assert v == 60, f"expected severity-cap 60, got {v}"
+
+    # non-reduce actions carry NO advisory key (vocabulary untouched)
+    d2 = engine.decide(DEMO_ANCHOR)      # emergency_stop
+    assert "speed_advisory" not in d2["physics"]
+
+    # the advisory must NOT be a model feature (leakage wall holds)
+    from ml_sensor.scenarios import FEATURE_COLUMNS
+    assert "speed_advisory" not in FEATURE_COLUMNS
+    assert "recommended_speed_kmh" not in FEATURE_COLUMNS
+
+
+# =====================================================================
+# 10) Evidence: why the model chose this (v3)
+# =====================================================================
+
+def test_evidence_on_model_decisions():
+    from ml_sensor.decide import DecisionEngine
+    from ml_sensor.scenarios import FEATURE_COLUMNS
+    
+    engine = DecisionEngine()
+
+    # model-source decision -> evidence present, well-formed
+    d = engine.decide(DEMO_ANCHOR)
+    assert d["source"] == "model"
+    ev = d["evidence"]
+    assert ev is not None
+    assert "summary" in ev and "features" in ev
+    assert len(ev["features"]) >= 3, "evidence should cover the model's top features"
+    for entry in ev["features"]:
+        assert entry["reads"], "every evidence entry must be renderable"
+        assert entry["feature"] in FEATURE_COLUMNS
+    # leakage wall: evidence describes, never feeds
+    assert not ({"speed_advisory", "recommended_speed_kmh"} &
+                {e["feature"] for e in ev["features"]})
+
+    # hard_rule decision -> no model, no evidence
+    d2 = engine.decide(R1_SCENARIO)
+    assert d2["source"] == "hard_rule"
+    assert d2["evidence"] is None
+
+
+def test_evidence_via_api():
+    from fastapi.testclient import TestClient
+    from api.main import app
+    from ml_sensor.scenarios import DEMO_ANCHOR
+    with TestClient(app) as client:
+        r = client.post("/api/incident", json=dict(DEMO_ANCHOR))
+        assert r.status_code == 200
+        body = r.json()
+        assert body["source"] == "model"
+        assert body["evidence"] is not None
+        assert len(body["evidence"]["features"]) >= 3
+        assert body["decision_latency_ms"] < 100
+

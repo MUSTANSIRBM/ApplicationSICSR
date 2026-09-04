@@ -397,7 +397,7 @@ def rule_engine_action(sc: dict) -> str:
 # =====================================================================
 
 SEED = 42
-N_SCENARIOS = 4000
+N_SCENARIOS = 10000
 LABEL_NOISE_FRACTION = 0.04
 # Separate rng stream for label noise, so re-ordering generation draws
 # can never silently shift which rows get noised. Determinism you can

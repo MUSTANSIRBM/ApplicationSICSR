@@ -13,10 +13,10 @@
       "expected_action": "emergency_stop",
       "engine_action": "emergency_stop",
       "source": "model",
-      "confidence": 0.9998,
+      "confidence": 0.9931,
       "agreed": true,
       "r1_fired": false,
-      "decision_latency_ms": 9.58,
+      "decision_latency_ms": 15.89,
       "physics": {
         "time_to_obstacle_min": 4.25,
         "braking_distance_required_km": 4.608,
@@ -25,7 +25,7 @@
         "weather_braking_multiplier": 1.6
       },
       "reasons": [
-        "Trained decision model (xgboost) predicted 'emergency_stop' with confidence 0.9998 (above the 0.55 floor).",
+        "Trained decision model (xgboost) predicted 'emergency_stop' with confidence 0.9931 (above the 0.55 floor).",
         "Key drivers: severity 9, alternate route not available, weather 'heavy_rain', time-to-obstacle 4.25 min.",
         "R1 did not fire (scenario is in the gray zone the model is licensed to decide)."
       ]
@@ -36,10 +36,10 @@
       "expected_action": "proceed_with_caution",
       "engine_action": "proceed_with_caution",
       "source": "model",
-      "confidence": 0.996,
+      "confidence": 0.9922,
       "agreed": true,
       "r1_fired": false,
-      "decision_latency_ms": 6.62,
+      "decision_latency_ms": 12.24,
       "physics": {
         "time_to_obstacle_min": 11.0,
         "braking_distance_required_km": 0.72,
@@ -48,7 +48,7 @@
         "weather_braking_multiplier": 1.0
       },
       "reasons": [
-        "Trained decision model (xgboost) predicted 'proceed_with_caution' with confidence 0.9960 (above the 0.55 floor).",
+        "Trained decision model (xgboost) predicted 'proceed_with_caution' with confidence 0.9922 (above the 0.55 floor).",
         "Key drivers: severity 3, alternate route not available, weather 'clear', time-to-obstacle 11.0 min.",
         "R1 did not fire (scenario is in the gray zone the model is licensed to decide)."
       ]
@@ -59,10 +59,10 @@
       "expected_action": "proceed_with_caution",
       "engine_action": "proceed_with_caution",
       "source": "model",
-      "confidence": 0.9985,
+      "confidence": 0.989,
       "agreed": true,
       "r1_fired": false,
-      "decision_latency_ms": 7.24,
+      "decision_latency_ms": 12.13,
       "physics": {
         "time_to_obstacle_min": 7.2,
         "braking_distance_required_km": 1.238,
@@ -71,7 +71,7 @@
         "weather_braking_multiplier": 1.1
       },
       "reasons": [
-        "Trained decision model (xgboost) predicted 'proceed_with_caution' with confidence 0.9985 (above the 0.55 floor).",
+        "Trained decision model (xgboost) predicted 'proceed_with_caution' with confidence 0.9890 (above the 0.55 floor).",
         "Key drivers: severity 2, alternate route not available, weather 'fog', time-to-obstacle 7.2 min.",
         "R1 did not fire (scenario is in the gray zone the model is licensed to decide)."
       ]
@@ -82,10 +82,10 @@
       "expected_action": "emergency_stop",
       "engine_action": "emergency_stop",
       "source": "model",
-      "confidence": 0.9973,
+      "confidence": 0.9938,
       "agreed": true,
       "r1_fired": false,
-      "decision_latency_ms": 6.09,
+      "decision_latency_ms": 12.2,
       "physics": {
         "time_to_obstacle_min": 1.5,
         "braking_distance_required_km": 8.0,
@@ -94,7 +94,7 @@
         "weather_braking_multiplier": 1.0
       },
       "reasons": [
-        "Trained decision model (xgboost) predicted 'emergency_stop' with confidence 0.9973 (above the 0.55 floor).",
+        "Trained decision model (xgboost) predicted 'emergency_stop' with confidence 0.9938 (above the 0.55 floor).",
         "Key drivers: severity 8, alternate route not available, weather 'clear', time-to-obstacle 1.5 min.",
         "R1 did not fire (scenario is in the gray zone the model is licensed to decide)."
       ]
@@ -105,10 +105,10 @@
       "expected_action": "emergency_stop",
       "engine_action": "emergency_stop",
       "source": "model",
-      "confidence": 0.9988,
+      "confidence": 0.9994,
       "agreed": true,
       "r1_fired": false,
-      "decision_latency_ms": 7.15,
+      "decision_latency_ms": 12.41,
       "physics": {
         "time_to_obstacle_min": 4.36,
         "braking_distance_required_km": 4.598,
@@ -117,7 +117,7 @@
         "weather_braking_multiplier": 1.9
       },
       "reasons": [
-        "Trained decision model (xgboost) predicted 'emergency_stop' with confidence 0.9988 (above the 0.55 floor).",
+        "Trained decision model (xgboost) predicted 'emergency_stop' with confidence 0.9994 (above the 0.55 floor).",
         "Key drivers: severity 9, alternate route not available, weather 'snow', time-to-obstacle 4.36 min.",
         "R1 did not fire (scenario is in the gray zone the model is licensed to decide)."
       ]
@@ -128,10 +128,10 @@
       "expected_action": "reroute",
       "engine_action": "reroute",
       "source": "model",
-      "confidence": 0.9958,
+      "confidence": 0.9953,
       "agreed": true,
       "r1_fired": false,
-      "decision_latency_ms": 6.76,
+      "decision_latency_ms": 12.01,
       "physics": {
         "time_to_obstacle_min": 6.67,
         "braking_distance_required_km": 2.106,
@@ -140,7 +140,7 @@
         "weather_braking_multiplier": 1.3
       },
       "reasons": [
-        "Trained decision model (xgboost) predicted 'reroute' with confidence 0.9958 (above the 0.55 floor).",
+        "Trained decision model (xgboost) predicted 'reroute' with confidence 0.9953 (above the 0.55 floor).",
         "Key drivers: severity 7, alternate route available, weather 'rain', time-to-obstacle 6.67 min.",
         "R1 did not fire (scenario is in the gray zone the model is licensed to decide)."
       ]
@@ -151,21 +151,26 @@
       "expected_action": "reduce_speed",
       "engine_action": "reduce_speed",
       "source": "model",
-      "confidence": 0.9999,
+      "confidence": 0.9998,
       "agreed": true,
       "r1_fired": false,
-      "decision_latency_ms": 6.98,
+      "decision_latency_ms": 11.9,
       "physics": {
         "time_to_obstacle_min": 9.0,
         "braking_distance_required_km": 1.28,
         "effective_distance_km": 11.994,
         "safe_stopping_possible": true,
-        "weather_braking_multiplier": 1.0
+        "weather_braking_multiplier": 1.0,
+        "speed_advisory": {
+          "recommended_speed_kmh": 60,
+          "basis": "braking at 60 km/h uses at most 50% of the remaining 11.99 km (sensor-error headroom); severity 5/10 caps prudence at 75% of current speed"
+        }
       },
       "reasons": [
-        "Trained decision model (xgboost) predicted 'reduce_speed' with confidence 0.9999 (above the 0.55 floor).",
+        "Trained decision model (xgboost) predicted 'reduce_speed' with confidence 0.9998 (above the 0.55 floor).",
         "Key drivers: severity 5, alternate route not available, weather 'clear', time-to-obstacle 9.0 min.",
-        "R1 did not fire (scenario is in the gray zone the model is licensed to decide)."
+        "R1 did not fire (scenario is in the gray zone the model is licensed to decide).",
+        "Speed advisory: reduce to 60 km/h (display-only, physics + severity based)."
       ]
     },
     {
@@ -174,21 +179,26 @@
       "expected_action": "reduce_speed",
       "engine_action": "reduce_speed",
       "source": "model",
-      "confidence": 0.994,
+      "confidence": 0.9535,
       "agreed": true,
       "r1_fired": false,
-      "decision_latency_ms": 7.96,
+      "decision_latency_ms": 11.56,
       "physics": {
         "time_to_obstacle_min": 2.6,
         "braking_distance_required_km": 4.95,
         "effective_distance_km": 6.471,
         "safe_stopping_possible": true,
-        "weather_braking_multiplier": 1.1
+        "weather_braking_multiplier": 1.1,
+        "speed_advisory": {
+          "recommended_speed_kmh": 110,
+          "basis": "braking at 110 km/h uses at most 50% of the remaining 6.47 km (sensor-error headroom); severity 3/10 caps prudence at 75% of current speed"
+        }
       },
       "reasons": [
-        "Trained decision model (xgboost) predicted 'reduce_speed' with confidence 0.9940 (above the 0.55 floor).",
+        "Trained decision model (xgboost) predicted 'reduce_speed' with confidence 0.9535 (above the 0.55 floor).",
         "Key drivers: severity 3, alternate route not available, weather 'fog', time-to-obstacle 2.6 min.",
-        "R1 did not fire (scenario is in the gray zone the model is licensed to decide)."
+        "R1 did not fire (scenario is in the gray zone the model is licensed to decide).",
+        "Speed advisory: reduce to 110 km/h (display-only, physics + severity based)."
       ]
     },
     {
@@ -197,21 +207,26 @@
       "expected_action": "reduce_speed",
       "engine_action": "reduce_speed",
       "source": "model",
-      "confidence": 0.9988,
+      "confidence": 0.9966,
       "agreed": true,
       "r1_fired": false,
-      "decision_latency_ms": 7.37,
+      "decision_latency_ms": 12.23,
       "physics": {
         "time_to_obstacle_min": 3.43,
         "braking_distance_required_km": 1.666,
         "effective_distance_km": 3.99,
         "safe_stopping_possible": true,
-        "weather_braking_multiplier": 1.7
+        "weather_braking_multiplier": 1.7,
+        "speed_advisory": {
+          "recommended_speed_kmh": 50,
+          "basis": "braking at 50 km/h uses at most 50% of the remaining 3.99 km (sensor-error headroom); severity 6/10 caps prudence at 75% of current speed"
+        }
       },
       "reasons": [
-        "Trained decision model (xgboost) predicted 'reduce_speed' with confidence 0.9988 (above the 0.55 floor).",
+        "Trained decision model (xgboost) predicted 'reduce_speed' with confidence 0.9966 (above the 0.55 floor).",
         "Key drivers: severity 6, alternate route not available, weather 'flood', time-to-obstacle 3.43 min.",
-        "R1 did not fire (scenario is in the gray zone the model is licensed to decide)."
+        "R1 did not fire (scenario is in the gray zone the model is licensed to decide).",
+        "Speed advisory: reduce to 50 km/h (display-only, physics + severity based)."
       ]
     },
     {
@@ -220,21 +235,26 @@
       "expected_action": "reduce_speed",
       "engine_action": "reduce_speed",
       "source": "model",
-      "confidence": 0.9984,
+      "confidence": 0.995,
       "agreed": true,
       "r1_fired": false,
-      "decision_latency_ms": 8.4,
+      "decision_latency_ms": 12.15,
       "physics": {
         "time_to_obstacle_min": 4.2,
         "braking_distance_required_km": 2.0,
         "effective_distance_km": 6.987,
         "safe_stopping_possible": true,
-        "weather_braking_multiplier": 1.0
+        "weather_braking_multiplier": 1.0,
+        "speed_advisory": {
+          "recommended_speed_kmh": 60,
+          "basis": "braking at 60 km/h uses at most 50% of the remaining 6.99 km (sensor-error headroom); severity 7/10 caps prudence at 60% of current speed"
+        }
       },
       "reasons": [
-        "Trained decision model (xgboost) predicted 'reduce_speed' with confidence 0.9984 (above the 0.55 floor).",
+        "Trained decision model (xgboost) predicted 'reduce_speed' with confidence 0.9950 (above the 0.55 floor).",
         "Key drivers: severity 7, alternate route available, weather 'clear', time-to-obstacle 4.2 min.",
-        "R1 did not fire (scenario is in the gray zone the model is licensed to decide)."
+        "R1 did not fire (scenario is in the gray zone the model is licensed to decide).",
+        "Speed advisory: reduce to 60 km/h (display-only, physics + severity based)."
       ]
     }
   ]

@@ -6,36 +6,29 @@ Step 5 of 7. One endpoint, one lifecycle beat:
   sensor incident in -> DecisionEngine (R1 wall -> model -> R2 leash)
   -> full decision JSON out
   -> and, when create_repair_defect=true, the repair becomes a Defect
-     in the planner DB (LOCKED: ALWAYS created when the flag is true --
-     the flag is a human decision, the endpoint obeys it, no severity
-     gate).
+     in the planner DB (LOCKED: ALWAYS created when the flag is true).
 
 This is api/ glue: FastAPI + pydantic + SQLModel live HERE and nowhere
-near ml_sensor (purity wall, test-enforced at step 6).
+near ml_sensor (purity wall, test-enforced).
 
 Contract discipline:
   - Swagger (/docs) is the truth for what this exposes.
   - The defect write mirrors api/routes.py inject_defect line-for-line
     (corridor/department resolution, reported_at = latest weekly
-    horizon start, 24h due window, NEW status) so both entry points
-    write the SAME shape of Defect. Two write paths with different
-    shapes = two truths in one DB.
-  - Incident-created defects use source_ref "INC-####" so they are
-    distinguishable from injected "INJ-####" in the timeline UI.
-  - v2: department enum members are RESOLVED from the real enum at
-    import time (normalized match on name/value), never hardcoded
-    from memory. A miss fails loud with the actual members printed.
-  - v3: sqlmodel's select, not sqlalchemy's -- Session.exec only
-    unwraps entities from statements it recognizes (truth:
-    DepartmentCode members are ENG / TRD / SNT).
+    horizon start, 24h due window, NEW status).
+  - Incident-created defects use source_ref "INC-####" (vs INJ-####).
+  - v2: department enum members RESOLVED from the real enum at import
+    (ENG / TRD / SNT -- the pasted truth).
+  - v3: sqlmodel's select, NOT sqlalchemy's, inside Session.exec.
+  - v4: response carries decision 'evidence' (why the model chose
+    this, as numbers) -- passed through from the engine, rendered
+    never recomputed.
 
-Bridge defaults (owner-tunable at review, each flagged):
+Bridge defaults (owner-locked):
   DEFECT severity  = ceil(incident_severity / 2), clamped 1..5
-  safety_flag      = incident_severity >= 8        <-- MY INFERENCE,
-                     deserves explicit owner sign-off
-  duration         = BASE_HOURS[type] * SEV_MULT[defect_severity],
-                     min 15 min, rounded to 5 min
-  due window       = 24h (same as inject default)
+  safety_flag      = incident_severity >= 8
+  duration         = BASE_HOURS[type] * SEV_MULT[defect_severity]
+  due window       = 24h
 """
 
 from __future__ import annotations
@@ -48,9 +41,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlmodel import Session, select    # sqlmodel's select, NOT
                                         # sqlalchemy's: Session.exec
                                         # only unwraps entities from
-                                        # statements it recognizes --
-                                        # the sqlalchemy one hands
-                                        # back raw Rows (v3 bugfix)
+                                        # statements it recognizes
 
 from api.routes import PLAN_START, _latest_weekly
 from ml_sensor.decide import DecisionEngine
@@ -62,7 +53,7 @@ from planner.models import (Corridor, Defect, Department,
 router = APIRouter(prefix="/api", tags=["incident"])
 
 # =====================================================================
-# Department code resolution -- read truth, never guess (v2)
+# Department code resolution -- read truth, never guess
 # =====================================================================
 
 def _norm(s: str) -> str:
@@ -70,9 +61,6 @@ def _norm(s: str) -> str:
 
 
 def _resolve_dept_code(*candidates: str) -> DepartmentCode:
-    """Find the DepartmentCode member matching any candidate, by
-    normalized name OR value. Fails LOUD (listing the real members)
-    rather than guessing. Truth (owner paste): ENG / TRD / SNT."""
     table: dict[str, DepartmentCode] = {}
     for m in DepartmentCode:
         table[_norm(m.name)] = m
@@ -89,11 +77,8 @@ def _resolve_dept_code(*candidates: str) -> DepartmentCode:
     members = [f"{m.name}={m.value}" for m in DepartmentCode]
     raise RuntimeError(
         f"could not resolve a DepartmentCode member from candidates "
-        f"{candidates}; actual members: {members} -- paste this error "
-        f"and the mapping gets pinned to the exact member")
+        f"{candidates}; actual members: {members}")
 
-# Resolved ONCE at import. Loud failure at boot beats silent failure
-# at request time; the step-6 tests lock these to ENG/TRD/SNT.
 DEPT_ENGINEERING = _resolve_dept_code("ENGINEERING", "ENG")
 DEPT_TRD = _resolve_dept_code("TRD")
 DEPT_S_AND_T = _resolve_dept_code("SNT", "S_AND_T", "S_T", "S&T",
@@ -140,8 +125,7 @@ SensorIn = Literal["track_circuit", "axle_counter",
 
 class IncidentIn(BaseModel):
     """The 14 raw fields the frontend sends (decision 12: computed
-    values like braking distance are NEVER accepted as inputs -- they
-    don't exist in this schema at all, which is the wall)."""
+    values are NEVER accepted as inputs -- they don't exist here)."""
     train_speed_kmh: float = Field(ge=45, le=200)
     distance_to_obstacle_km: float = Field(ge=0, le=20)
     environmental_condition: WeatherIn
@@ -164,7 +148,7 @@ class IncidentIn(BaseModel):
     @field_validator("environmental_condition")
     @classmethod
     def _norm_weather(cls, v: str) -> str:
-        if v == "dry":            # locked: dry -> clear at the boundary
+        if v == "dry":
             return "clear"
         return v
 
@@ -191,7 +175,7 @@ class IncidentIn(BaseModel):
 
 
 # =====================================================================
-# Bridge mapping: incident -> planner defect (Flag 6 defaults)
+# Bridge mapping
 # =====================================================================
 
 BASE_HOURS: dict[str, float] = {
@@ -204,8 +188,8 @@ BASE_HOURS: dict[str, float] = {
 
 SEV_MULT: dict[int, float] = {1: 0.6, 2: 0.8, 3: 1.0, 4: 1.25, 5: 1.5}
 
-SAFETY_SEVERITY_THRESHOLD = 8     # <-- my inference; owner sign-off due
-DUE_IN_HOURS = 24                 # same as inject default
+SAFETY_SEVERITY_THRESHOLD = 8
+DUE_IN_HOURS = 24
 
 
 def _defect_severity(incident_severity: int) -> int:
@@ -243,6 +227,7 @@ class IncidentOut(BaseModel):
     reasons: list[str]
     physics: dict
     probabilities: Optional[dict]
+    evidence: Optional[dict] = None        # v4: why the model chose this
     decision_latency_ms: float
     within_100ms_budget: bool
     repair_defect: Optional[RepairDefectOut] = None
@@ -250,11 +235,6 @@ class IncidentOut(BaseModel):
 
 def _create_repair_defect(inc: IncidentIn, decision: dict,
                           session: Session) -> Defect:
-    """Mirror of inject_defect's write path (same resolution, same
-    clock, same defaults) so incident defects and injected defects are
-    indistinguishable to the solver, scoring, and timeline. The REAL
-    decision is baked into the description at construction --
-    explainability is a data structure (locked decision 8)."""
     cor = session.exec(select(Corridor).where(
         Corridor.code == inc.corridor)).first()
     if not cor:
@@ -300,20 +280,18 @@ def post_incident(inc: IncidentIn,
                   session: Session = Depends(get_session)):
     """The Detect -> Decide -> Repair lifecycle in one call.
 
-    1. Decide (seconds): the engine answers under the R1/R2 leash.
+    1. Decide (seconds): the engine answers under the R1/R2 leash,
+       with reasons AND numeric evidence for model decisions.
     2. Bridge (flagged): if create_repair_defect=true, the repair
        becomes a planner Defect -- ALWAYS (locked owner decision).
-       The defect creation is NOT influenced by the decision's action.
     """
     engine = get_engine()
 
-    # --- 1) decide ---
     try:
         decision = engine.decide(inc.model_dump())
     except ValueError as exc:
         raise HTTPException(422, str(exc))
 
-    # --- 2) bridge (only if flagged) ---
     repair: Optional[RepairDefectOut] = None
     if inc.create_repair_defect:
         d = _create_repair_defect(inc, decision, session)
@@ -344,7 +322,9 @@ def post_incident(inc: IncidentIn,
         reasons=decision["reasons"],
         physics=decision["physics"],
         probabilities=decision["probabilities"],
+        evidence=decision.get("evidence"),
         decision_latency_ms=decision["decision_latency_ms"],
         within_100ms_budget=decision["within_100ms_budget"],
         repair_defect=repair,
     )
+
